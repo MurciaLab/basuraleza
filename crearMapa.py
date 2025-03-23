@@ -12,6 +12,7 @@ import argparse
 import sys
 import tempfile
 import shutil
+import datetime
 
 # Importaciones para Google Drive - Condicionales
 DRIVE_AVAILABLE = False
@@ -73,6 +74,122 @@ def get_decimal_coordinates(gps_info):
         print(f"Error al convertir coordenadas: {e}")
         return None
 
+def get_readable_exif(exif_data):
+    """Extrae información EXIF útil en formato legible"""
+    exif_info = {}
+    
+    # Función auxiliar para convertir cualquier valor a string de forma segura
+    def safe_str(value):
+        """Convierte cualquier valor a string de forma segura"""
+        if hasattr(value, 'numerator') and hasattr(value, 'denominator'):
+            # Es un IFDRational
+            num = value.numerator
+            den = value.denominator
+            if den == 0:
+                return "0"
+            elif num == 0:
+                return "0"
+            elif den == 1:
+                return str(num)
+            elif num > den and den != 0:
+                return f"{num/den:.2f}"
+            else:
+                return f"{num}/{den}"
+        elif isinstance(value, tuple) and len(value) == 2:
+            # Es una tupla que representa una fracción
+            num, den = value
+            if den == 0:
+                return "0"
+            elif num == 0:
+                return "0"
+            elif den == 1:
+                return str(num)
+            elif num > den and den != 0:
+                return f"{num/den:.2f}"
+            else:
+                return f"{num}/{den}"
+        else:
+            # Otro tipo
+            return str(value)
+    
+    # Fecha y hora
+    if 'DateTimeOriginal' in exif_data:
+        exif_info['Fecha'] = str(exif_data['DateTimeOriginal'])
+    elif 'DateTime' in exif_data:
+        exif_info['Fecha'] = str(exif_data['DateTime'])
+    
+    # Cámara y lente
+    if 'Make' in exif_data:
+        exif_info['Marca'] = str(exif_data['Make'])
+    if 'Model' in exif_data:
+        exif_info['Modelo'] = str(exif_data['Model'])
+    if 'LensMake' in exif_data:
+        exif_info['Marca Lente'] = str(exif_data['LensMake'])
+    if 'LensModel' in exif_data:
+        exif_info['Modelo Lente'] = str(exif_data['LensModel'])
+        
+    # Configuración de captura
+    if 'ExposureTime' in exif_data:
+        if hasattr(exif_data['ExposureTime'], 'numerator') and hasattr(exif_data['ExposureTime'], 'denominator'):
+            num = exif_data['ExposureTime'].numerator
+            den = exif_data['ExposureTime'].denominator
+            if num == 1 and den > 1:
+                exposure = f"1/{den}s"
+            else:
+                exposure = f"{safe_str(exif_data['ExposureTime'])}s"
+        elif isinstance(exif_data['ExposureTime'], tuple):
+            num, den = exif_data['ExposureTime']
+            if num == 1 and den > 1:
+                exposure = f"1/{den}s"
+            else:
+                exposure = f"{num}/{den}s"
+        else:
+            exposure = f"{exif_data['ExposureTime']}s"
+        exif_info['Velocidad'] = exposure
+        
+    if 'FNumber' in exif_data:
+        exif_info['Apertura'] = f"f/{safe_str(exif_data['FNumber'])}"
+        
+    if 'ISOSpeedRatings' in exif_data:
+        exif_info['ISO'] = str(exif_data['ISOSpeedRatings'])
+        
+    if 'FocalLength' in exif_data:
+        exif_info['Distancia Focal'] = f"{safe_str(exif_data['FocalLength'])}mm"
+        
+    # Resolución
+    if 'ExifImageWidth' in exif_data and 'ExifImageHeight' in exif_data:
+        exif_info['Resolución'] = f"{exif_data['ExifImageWidth']}x{exif_data['ExifImageHeight']}"
+    elif 'ImageWidth' in exif_data and 'ImageLength' in exif_data:
+        exif_info['Resolución'] = f"{exif_data['ImageWidth']}x{exif_data['ImageLength']}"
+    
+    # GPS Altitud
+    if 'GPSInfo' in exif_data and 'GPSAltitude' in exif_data['GPSInfo']:
+        alt_ref = exif_data['GPSInfo'].get('GPSAltitudeRef', 0)
+        altitude = exif_data['GPSInfo']['GPSAltitude']
+        
+        # Convertir la altitud a un valor decimal
+        alt_value = 0
+        if hasattr(altitude, 'numerator') and hasattr(altitude, 'denominator'):
+            if altitude.denominator != 0:
+                alt_value = altitude.numerator / altitude.denominator
+        elif isinstance(altitude, tuple) and len(altitude) == 2:
+            num, den = altitude
+            if den != 0:
+                alt_value = num / den
+        else:
+            try:
+                alt_value = float(altitude)
+            except (ValueError, TypeError):
+                alt_value = 0
+                
+        # Si alt_ref es 1, la altitud es negativa (bajo el nivel del mar)
+        if alt_ref == 1:
+            alt_value = -alt_value
+            
+        exif_info['Altitud'] = f"{alt_value:.1f}m"
+    
+    return exif_info
+
 def get_images_from_folder(folder_path):
     """Carga imágenes desde una carpeta local"""
     images = []
@@ -111,7 +228,7 @@ def get_images_from_folder(folder_path):
 def create_folium_map(image_data_list, output_file="images_map.html"):
     """Crea un mapa interactivo con Folium"""
     # Encontrar el punto central para el mapa
-    valid_coords = [coords for _, coords, _ in image_data_list if coords]
+    valid_coords = [coords for _, coords, _, _ in image_data_list if coords]
     if not valid_coords:
         return None
     
@@ -122,22 +239,34 @@ def create_folium_map(image_data_list, output_file="images_map.html"):
     map_obj = folium.Map(location=[avg_lat, avg_lon], zoom_start=10)
     marker_cluster = MarkerCluster().add_to(map_obj)
     
-    for img_name, coords, img_obj in image_data_list:
+    for img_name, coords, img_obj, exif_info in image_data_list:
         if coords:
             # Convertir imagen a base64 para incrustarla en el popup
             buffered = io.BytesIO()
-            img_obj.copy().thumbnail((200, 200))  # Redimensionar para el popup
+            img_obj.copy().thumbnail((300, 300))  # Redimensionar para el popup
             img_obj.save(buffered, format="JPEG")
             img_str = base64.b64encode(buffered.getvalue()).decode()
             
+            # Construir HTML para el popup con información EXIF
             html = f"""
-            <h3>{img_name}</h3>
-            <img src="data:image/jpeg;base64,{img_str}" width="200px">
-            <p>Coordenadas: {coords[0]:.6f}, {coords[1]:.6f}</p>
+            <div style="max-width:320px; font-family:Arial, sans-serif;">
+                <h3 style="margin-bottom:5px;">{img_name}</h3>
+                <img src="data:image/jpeg;base64,{img_str}" style="width:100%; max-width:300px; margin:5px 0;">
+                <div style="font-size:12px;">
+                    <p style="margin:2px 0;"><strong>Coordenadas:</strong> {coords[0]:.6f}, {coords[1]:.6f}</p>
             """
             
-            iframe = folium.IFrame(html=html, width=220, height=280)
-            popup = folium.Popup(iframe, max_width=220)
+            # Añadir información EXIF disponible
+            for key, value in exif_info.items():
+                html += f'<p style="margin:2px 0;"><strong>{key}:</strong> {value}</p>'
+                
+            html += """
+                </div>
+            </div>
+            """
+            
+            iframe = folium.IFrame(html=html, width=340, height=450)
+            popup = folium.Popup(iframe, max_width=340)
             folium.Marker(
                 location=coords,
                 popup=popup,
@@ -152,18 +281,30 @@ def create_kml(image_data_list, output_file="images_map.kml"):
     """Genera un archivo KML con las imágenes geolocalizadas"""
     kml = simplekml.Kml()
     
-    for img_name, coords, img_obj in image_data_list:
+    for img_name, coords, img_obj, exif_info in image_data_list:
         if coords:
             # Crear punto en KML
             pnt = kml.newpoint(name=img_name, coords=[(coords[1], coords[0])])
             
             # Guardar imagen como archivo temporal
             buffered = io.BytesIO()
+            img_obj.copy().thumbnail((300, 300))
             img_obj.save(buffered, format="JPEG")
             
-            # Añadir imagen como descripción
-            img_str = base64.b64encode(buffered.getvalue()).decode()
-            pnt.description = f'<img src="data:image/jpeg;base64,{img_str}" width="300px">'
+            # Construir descripción con imagen e información EXIF
+            description = f'<h3>{img_name}</h3>'
+            description += f'<img src="data:image/jpeg;base64,{base64.b64encode(buffered.getvalue()).decode()}" width="300px"><br/>'
+            
+            # Añadir información EXIF
+            description += '<table border="0" cellpadding="2" cellspacing="0">'
+            description += f'<tr><td><b>Coordenadas:</b></td><td>{coords[0]:.6f}, {coords[1]:.6f}</td></tr>'
+            
+            for key, value in exif_info.items():
+                description += f'<tr><td><b>{key}:</b></td><td>{value}</td></tr>'
+                
+            description += '</table>'
+            
+            pnt.description = description
     
     kml.save(output_file)
     print(f"Archivo KML generado: {output_file}")
@@ -173,7 +314,7 @@ def create_gpx(image_data_list, output_file="images_map.gpx"):
     """Genera un archivo GPX con las imágenes geolocalizadas"""
     gpx = gpxpy.gpx.GPX()
     
-    for img_name, coords, _ in image_data_list:
+    for img_name, coords, _, exif_info in image_data_list:
         if coords:
             # Crear waypoint en GPX
             waypoint = gpxpy.gpx.GPXWaypoint(
@@ -181,6 +322,15 @@ def create_gpx(image_data_list, output_file="images_map.gpx"):
                 longitude=coords[1],
                 name=img_name
             )
+            
+            # Añadir información EXIF como comentario
+            comment_parts = []
+            for key, value in exif_info.items():
+                comment_parts.append(f"{key}: {value}")
+            
+            if comment_parts:
+                waypoint.comment = " | ".join(comment_parts)
+            
             gpx.waypoints.append(waypoint)
     
     with open(output_file, 'w') as f:
@@ -364,19 +514,31 @@ def main():
             print("No se encontraron imágenes.")
             return
         
-        # Extraer datos GPS de cada imagen
+        # Extraer datos GPS y EXIF de cada imagen
         image_data_list = []
         for img_data in image_list:
             image = img_data['image']
             name = img_data['name']
             
+            # Obtener todos los datos EXIF
             exif_data = get_exif_data(image)
+            
+            # Extraer información GPS
             gps_info = exif_data.get('GPSInfo', None)
             coords = get_decimal_coordinates(gps_info) if gps_info else None
             
+            # Extraer información EXIF legible
+            exif_info = get_readable_exif(exif_data)
+            
             if coords:
                 print(f"Coordenadas de {name}: {coords}")
-                image_data_list.append((name, coords, image))
+                # Añadir información de metadatos
+                if exif_info:
+                    print("Información EXIF encontrada:")
+                    for key, value in exif_info.items():
+                        print(f"  - {key}: {value}")
+                
+                image_data_list.append((name, coords, image, exif_info))
             else:
                 print(f"No se encontraron coordenadas GPS en {name}")
         
