@@ -66,18 +66,6 @@
             width: 100%;
         }
 
-        .thumbnail-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 90%;
-            max-width: 600px;
-            border: 1px solid #eee;
-            border-radius: 10px;
-            padding: 15px;
-            background-color: #f9f9f9;
-        }
-
         .thumbnail {
             width: 120px;
             height: 120px;
@@ -126,6 +114,51 @@
             font-size: 1em;
             margin-top: 5px;
             display: none;
+        }
+
+        .delete-btn {
+        padding: 10px 25px;
+        background-color: #e74c3c; /* Red color for the delete button */
+        color: white;
+        border: none;
+        border-radius: 25px;
+        font-size: 18px;
+        cursor: pointer;
+        margin-top: 10px; /* Adjust spacing as needed */
+        width: auto;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b; /* Darker red for hover effect */
+        }
+
+        .delete-btn:disabled {
+            background-color: #e74c3c;
+            cursor: not-allowed;
+        }
+        .thumbnail-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 90%;
+            max-width: 600px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            transition: opacity 0.5s ease, pointer-events 0.5s ease; /* Transition for opacity and pointer-events */
+        }
+
+        /* When fading out, hide the element with opacity and disable interactions */
+        .thumbnail-container.fade-out {
+            opacity: 0; /* Fade it out smoothly */
+            pointer-events: none; /* Prevent any interaction with the element during fade-out */
+        }
+
+        .fade-out {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity 0.5s ease, transform 0.5s ease;
         }
 
         @media (max-width: 600px) {
@@ -180,12 +213,6 @@
             thumbnails.innerHTML = "";
             fileQueue = Array.from(this.files);
 
-            totalCount = fileQueue.length;
-            successCount = 0;
-            failCount = 0;
-            errors = [];
-            validFileQueue = [];  // Clear previous valid files
-
             if (fileQueue.length === 0) {
                 document.getElementById("uploadBtn").disabled = true;
                 return;
@@ -194,8 +221,12 @@
             const checkGPSPromises = fileQueue.map((file, index) => checkGPSData(file, index));
             await Promise.all(checkGPSPromises);
 
-            // Enable the upload button only if there are valid files
             document.getElementById("uploadBtn").disabled = validFileQueue.length === 0;
+
+            // Show delete buttons only if files are selected
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.style.display = 'inline-block'; // Show delete buttons
+            });
         });
 
         async function checkGPSData(file, index) {
@@ -222,15 +253,27 @@
                         const lon = EXIF.getTag(this, "GPSLongitude");
 
                         if (!lat || !lon) {
-                            failCount++;
-                            errors.push(`${file.name}: Falta GPS`);
+                            // Mark as invalid photo
                             document.getElementById(`error-${index}`).innerHTML = 
                                 '❌ Foto no válida: faltan datos GPS<br>Esta foto no se subirá<br><a href="https://support.google.com/photos/answer/9921876?sjid=17219850777604204969-EU#zippy" target="_blank">Cómo activar la ubicación</a>';
                             document.getElementById(`progressBar-${index}`).style.display = "none";
+                            failCount++;
                         } else {
+                            // Mark as valid photo
                             validFileQueue.push(file);
                             document.getElementById(`checkmark-${index}`).style.display = "block";
+
+                            // Create and append the delete button only for valid photos
+                            const deleteButton = document.createElement('button');
+                            deleteButton.className = 'delete-btn';
+                            deleteButton.innerHTML = 'Eliminar';
+                            deleteButton.onclick = () => removeImage(file, index);
+
+                            document.getElementById(`checkmark-${index}`).parentNode.appendChild(deleteButton);
                         }
+
+                        // Enable/disable the "Subir" button based on valid files count
+                        document.getElementById("uploadBtn").disabled = validFileQueue.length === 0;
 
                         resolve();
                     });
@@ -238,6 +281,35 @@
                 reader.readAsDataURL(file);
             });
         }
+
+
+        function removeImage(file, index) {
+            // Get the delete button's parent container (thumbnail container)
+            const thumbnailContainer = event.target.closest('.thumbnail-container');
+
+            // Add the fade-out class to trigger the animation on the specific row
+            thumbnailContainer.classList.add('fade-out');
+
+            // Set a timeout to wait until the animation is done (500ms matches the CSS transition duration)
+            setTimeout(() => {
+                // Remove the image from the fileQueue
+                fileQueue.splice(index, 1);
+
+                // Also remove from the validFileQueue if it exists
+                validFileQueue = validFileQueue.filter((validFile) => validFile !== file);
+
+                // Remove the thumbnail container from the DOM after the fade-out effect
+                thumbnailContainer.remove();
+
+                // Enable/disable the upload button based on valid file count
+                document.getElementById("uploadBtn").disabled = validFileQueue.length === 0;
+            }, 500);  // Match the duration of the fade-out transition (500ms)
+        }
+
+
+
+
+
 
         // Upload the images when the button is clicked
         document.getElementById("uploadBtn").addEventListener("click", async function () {
@@ -258,6 +330,12 @@
 
             // Re-enable the file input for new selection and clear previous photos
             document.getElementById("fileInput").disabled = false;
+        });
+
+        document.getElementById("uploadBtn").addEventListener("click", function () {
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.style.display = 'none'; // Hide all delete buttons after upload
+            });
         });
 
         async function uploadFile(file, index) {
