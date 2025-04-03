@@ -27,6 +27,44 @@
             margin-top: 20px;
         }
 
+        .banner {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px;
+            background-color: #8AAA41; /* Same green background as before */
+            color: white;
+            position: sticky; /* Sticks the banner to the top */
+            top: 0;
+            width: 100%;
+            z-index: 100; /* Ensures it stays on top */
+        }
+
+        /* Adjust the small buttons inside the banner */
+        .small-btn {
+            padding: 10px 20px; /* Slightly larger padding for better visibility */
+            font-size: 16px; /* Adjust font size for the banner */
+            background-color: #8AAA41;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .small-btn:hover {
+            background-color: #7b8c34;
+        }
+
+        .small-btn:focus {
+            outline: none; /* Removes the default outline on focus */
+        }
+
+        /* Adjust existing button styles for consistency */
+        .button-container {
+            display: none; /* Remove the old top buttons, since we are using a banner now */
+        }
+
         h2 {
             color: #363635;
             margin-bottom: 20px;
@@ -184,10 +222,141 @@
                 height: 100px;
             }
         }
+
+        .button-container {
+            display: flex;
+            gap: 10px;
+            position: absolute;
+            top: 20px;
+            left: 10px;
+        }
+
+        .small-btn {
+            padding: 5px 12px;
+            font-size: 14px;
+            background-color: #8AAA41;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .small-btn:hover {
+            background-color: #7b8c34;
+        }
+
+        @media (max-width: 600px) {
+            .button-container {
+                top: 10px;
+                left: 5px;
+                gap: 5px;
+            }
+
+            .small-btn {
+                font-size: 12px;
+                padding: 4px 10px;
+            }
+        }
+
+        .modal {
+            display: none; /* Keep hidden by default */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Center the modal content, but align text to the left */
+        .modal-content {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: left; /* Align text to the left */
+            max-width: 80%;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-content h2 {
+            text-align: center;
+        }
+        /* Adjust list item dots to be closer to text */
+        ul li {
+            list-style-position: inside; /* Bring the dots closer to the text */
+        }
+
+        .close {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+
     </style>
 </head>
 <body>
-    <img src="MurciaLab-logo.jpeg" alt="MurciaLab Logo" class="logo">
+    <div class="banner">
+        <button id="infoBtn" class="small-btn">Información del proyecto</button>
+        <button id="helpBtn" class="small-btn">Ayuda</button>
+    </div>
+
+    <!-- Info Modal -->
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('infoModal')">&times;</span>
+            <h2>Basuraleza</h2>
+            <p>Es un esfuerzo por combatir la problemática de los residuos abandonados en nuestro entorno, poniendo el foco en la <b>participación activa de los vecinos</b> mediante una herramienta tan sencilla como efectiva: </p>
+            <p>Una página web que permite a cualquier ciudadano fotografiar puntos de acumulación de residuos y subirlos.</p>
+            <p>Todas las fotos aportadas serán marcadas en un mapa del municipio</p>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('helpModal')">&times;</span>
+            <section>
+                <h2>¿Por qué incluir la ubicación en la foto?</h2>
+                <p>Al final del proyecto, se generará un mapa con todos los puntos calientes gracias a las coordenadas GPS incluidas en la foto. Por esto, es indispensable tomar la fotografía con la ubicación activada en nuestro dispositivo móvil.</p>
+                
+                <h2>¿Cómo activo la ubicación en mi cámara?</h2>
+                <p>El procedimiento varía según el dispositivo. A continuación, se indica cómo hacerlo en los distintos modelos:</p>
+                <ul>
+                    <li><strong>Google Pixel:</strong> Configuración de la cámara &rarr; Guardar ubicación.</li>
+                    <li><strong>iOS:</strong> Configuración &rarr; Privacidad &rarr; Servicios de ubicación &rarr; Cámara: Mientras la app está en uso.</li>
+                    <li><strong>LG:</strong> Configuración de la cámara &rarr; Etiquetar ubicaciones.</li>
+                    <li><strong>Motorola:</strong> Configuración de la cámara &rarr; Guardar ubicación.</li>
+                    <li><strong>Nokia:</strong> Configuración de la cámara &rarr; Etiqueta de ubicación.</li>
+                    <li><strong>OnePlus:</strong> Configuración de la cámara &rarr; Guardar datos de ubicación.</li>
+                    <li><strong>OPPO:</strong> Configuración de la cámara &rarr; Ubicación.</li>
+                    <li><strong>Samsung:</strong> Configuración de la cámara &rarr; Etiquetas de ubicación.</li>
+                    <li><strong>Sony:</strong> Configuración de la cámara &rarr; Guardar ubicación.</li>
+                    <li><strong>Vivo:</strong> Configuración de la cámara &rarr; Ubicaciones geográficas.</li>
+                    <li><strong>Xiaomi:</strong> Configuración de la cámara &rarr; Guardar información de la ubicación.</li>
+                    <li><strong>ZTE:</strong> Configuración de la cámara &rarr; Etiquetado geográfico o Guardar ubicación.</li>
+                </ul>
+                
+                <h2>¿Cómo subo las imágenes al proyecto?</h2>
+                <ul>
+                    <li>Accede a la web <a href="https://murcialab.github.io/basuraleza/" target="_blank">Basuraleza</a>.</li>
+                    <li>Para añadir las imágenes que deseas, pulsa el botón <strong>"Seleccionar fotos"</strong>.</li>
+                    <li><em>Nota:</em> En este punto, las fotos aún <strong>NO</strong> se han subido.</li>
+                    <li>Si la foto no tiene datos GPS, aparecerá como errónea y el botón de "Subir" estará deshabilitado. Se mostrará un enlace con información sobre cómo activar la ubicación en la cámara.</li>
+                    <li>Si el lote contiene imágenes con y sin coordenadas, el botón de "Subir" se habilitará, permitiendo subir solo las válidas.</li>
+                    <li>Antes de subir definitivamente, puedes eliminar las imágenes no deseadas con el botón "Eliminar".</li>
+                    <li>Finalmente, pulsa <strong>"Subir"</strong> para completar el proceso.</li>
+                    <li>Al finalizar la subida, aparecerá un mensaje con el resultado de la operación.</li>
+                </ul>    
+            </section>
+        </div>
+    </div>
+
+    <img src="logo.png" alt="MurciaLab Logo" class="logo">
     <h2>Basuraleza</h2>
 
     <label for="fileInput" class="upload-btn">Seleccionar fotos</label>
@@ -206,6 +375,20 @@
         let validFileQueue = []; // Array to track valid files for upload
 
         const googleScriptUrl = "https://basuraleza.luistt.workers.dev/";
+
+        document.getElementById("infoBtn").addEventListener("click", function() {
+            document.getElementById("infoModal").style.display = "flex";
+        });
+
+        document.getElementById("helpBtn").addEventListener("click", function() {
+            document.getElementById("helpModal").style.display = "flex";
+        });
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = "none";
+        }
+
+
 
         // Enable the upload button only when files are selected
         document.getElementById('fileInput').addEventListener('change', async function () {
@@ -451,3 +634,4 @@
     </script>
 </body>
 </html>
+
