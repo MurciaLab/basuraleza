@@ -21,11 +21,12 @@
             text-align: center;
             overflow-y: auto; /* Allow vertical scrolling */
             overflow-x: hidden; /* Prevent horizontal scrolling */
+            min-height: 100vh;
         }
         .logo {
-            width: 150px;
-            margin-top: 20px;
-
+            width: 150px; /* Adjust logo size */
+            display: block;
+            margin: 20px auto; /* Center horizontally */
         }
 
         /* When the user scrolls, the logo will move to the left side of the banner */
@@ -99,6 +100,8 @@
             cursor: pointer;
             transition: background-color 0.3s ease;
             margin-top: 20px;
+            display: block;
+            margin: 10px auto; /* Center buttons */
         }
 
         .upload-btn:hover {
@@ -130,6 +133,7 @@
         .info {
             flex-grow: 1;
             margin-left: 20px;
+            text-align: left;
         }
 
         .progressBar {
@@ -152,52 +156,75 @@
         .error {
             color: #E74C3C;
             font-size: 0.9em;
-            margin-top: 5px;
+            margin-right: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .error-message {
+            flex: 1;
+            text-align: left;
         }
 
         .checkmark {
-            color: #8AAA41;
             font-size: 1.5em;
             margin-top: 5px;
             display: none;
         }
 
         .success-message {
-            color: #2ecc71;
+            color: #8AAA41;
             font-size: 1em;
             margin-top: 5px;
             display: none;
         }
 
-        .delete-btn {
-        padding: 10px 25px;
-        background-color: #E67E22; /* Red color for the delete button */
-        color: white;
-        border: none;
-        border-radius: 25px;
-        font-size: 18px;
-        cursor: pointer;
-        margin-top: 10px; /* Adjust spacing as needed */
-        width: auto;
+        .delete-icon {
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-top: 4px;
         }
 
-        .delete-btn:hover {
-            background-color: #cc6c17; /* Darker red for hover effect */
+        .delete-icon:hover {
+            transform: scale(1.2);
+        }
+
+        .checkmark {
+            display: none; /* shown only when valid */
+            color: #8AAA41;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 8px;
+            font-weight: bold;
+            font-size: 1.25rem;
         }
 
         .delete-btn:disabled {
             background-color: #e74c3c;
             cursor: not-allowed;
         }
+
+        #thumbnails {
+            display: flex;
+            flex-direction: column; /* Keep thumbnails in a column */
+            align-items: center; /* Center horizontally */
+            gap: 10px;
+            margin-top: 20px;
+        }
+
         .thumbnail-container {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            width: 90%;
-            max-width: 600px;
+            justify-content: center;
+            width: 30%;
+            max-width: 500px;
             border: 0.5px solid #8f8f8d;
             border-radius: 10px;
-            padding: 15px;
+            padding: 5px;
             background-color: #F0EDE5;
             transition: opacity 0.5s ease, pointer-events 0.5s ease; /* Transition for opacity and pointer-events */
         }
@@ -272,6 +299,22 @@
                 font-size: 12px;
                 padding: 4px 10px;
             }
+
+            .modal-content {
+                max-width: 95%; /* Slightly larger space on mobile */
+                padding: 15px;
+            }
+
+            h2 {
+                font-size: 1.25rem;
+            }
+
+            p {
+                font-size: 0.95rem;
+            }
+            ul {
+                padding-left: 25px; /* Slightly less indent for small screens */
+            }
         }
 
         .modal {
@@ -311,6 +354,74 @@
             cursor: pointer;
         }
 
+        .modal {
+            display: none;  /* Initially hidden */
+            position: fixed; /* Position fixed to stay in place when scrolling */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent background */
+            justify-content: center;
+            align-items: center; /* Center content vertically and horizontally */
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            position: relative;
+            box-sizing: border-box;
+            text-align: left;
+            margin: 0 auto;
+        }
+
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 30px;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .foto-basuraleza {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 20px auto; /* Center the image horizontally */
+            display: block; /* Ensure image is block-level for centering */
+            object-fit: cover;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 16px;
+            font-size: 14px;
+            color: #777;
+            background-color: #f4f4eb;
+            margin-top: auto;
+        }
+
+        .credit-text {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .murcialab-logo {
+            height: 90px;
+            vertical-align: middle;
+            transition: opacity 0.3s ease;
+        }
+
+        .credit-link:hover .murcialab-logo {
+            opacity: 0.8;
+        }
 
     </style>
 </head>
@@ -325,6 +436,7 @@
         <div class="modal-content">
             <span class="close" onclick="closeModal('infoModal')">&times;</span>
             <h2>Basuraleza</h2>
+            <img src="foto-basuraleza.jpeg" alt="Basuraleza" class="foto-basuraleza">
             <p>Es un esfuerzo por combatir la problemática de los residuos abandonados en nuestro entorno, poniendo el foco en la <b>participación activa de los vecinos</b> mediante una herramienta tan sencilla como efectiva: </p>
             <p>Una página web que permite a cualquier ciudadano fotografiar puntos de acumulación de residuos y subirlos.</p>
             <p>Todas las fotos aportadas serán marcadas en un mapa del municipio</p>
@@ -381,6 +493,14 @@
 
     <div id="thumbnails"></div>
 
+    <footer class="footer">
+        <span class="credit-text">Un proyecto de</span>
+        <a href="https://murcialab.org" target="_blank" class="credit-link">
+            <img src="MurciaLab-logo.png" alt="MurciaLab logo" class="murcialab-logo">
+        </a>
+    </footer>
+
+      
     <script>
         let fileQueue = [];
         let successCount = 0;
@@ -438,7 +558,7 @@
                                 <div class="progressFill" id="progressFill-${index}"></div>
                             </div>
                             <div class="error" id="error-${index}"></div>
-                            <div class="checkmark" id="checkmark-${index}">Foto válida, lista para ser subida</div>
+                            <div class="checkmark" id="checkmark-${index}">Foto válida. Lista para ser subida</div>
                             <div class="success-message" id="successMessage-${index}">✔ ¡Foto subida!</div>
                         </div>
                     `;
@@ -450,22 +570,50 @@
 
                         if (!lat || !lon) {
                             // Mark as invalid photo
-                            document.getElementById(`error-${index}`).innerHTML = 
-                                '❌ Foto no válida: faltan datos GPS<br>Esta foto no se subirá<br><a href="https://support.google.com/photos/answer/9921876?sjid=17219850777604204969-EU#zippy" target="_blank">Cómo activar la ubicación</a>';
+                            document.getElementById(`error-${index}`).innerHTML = `
+                                <div class="error-message">
+                                    <p>❌ Esta foto no se subirá<br>Faltan datos GPS</p>
+                                    <p><a href="https://support.google.com/photos/answer/9921876?sjid=17219850777604204969-EU#zippy" target="_blank">
+                                        Cómo activar la ubicación
+                                    </a></p>
+                                </div>
+                            `;
+
                             document.getElementById(`progressBar-${index}`).style.display = "none";
                             failCount++;
+                            const errorContainer = document.getElementById(`error-${index}`);
+                            errorContainer.style.display = "flex";
+                            errorContainer.style.alignItems = "center";
+                            errorContainer.style.justifyContent = "space-between";
+                            errorContainer.style.gap = "10px";
+
+                            const deleteIcon = document.createElement('img');
+                            deleteIcon.src = 'bin.png';
+                            deleteIcon.alt = 'Eliminar';
+                            deleteIcon.className = 'delete-icon';
+                            deleteIcon.onclick = () => removeImage(file, index);
+
+                            errorContainer.appendChild(deleteIcon);
                         } else {
                             // Mark as valid photo
                             validFileQueue.push(file);
                             document.getElementById(`checkmark-${index}`).style.display = "block";
 
                             // Create and append the delete button only for valid photos
-                            const deleteButton = document.createElement('button');
-                            deleteButton.className = 'delete-btn';
-                            deleteButton.innerHTML = 'Eliminar';
-                            deleteButton.onclick = () => removeImage(file, index);
+                            const checkmark = document.getElementById(`checkmark-${index}`);
+                            checkmark.style.display = "flex";
+                            checkmark.style.alignItems = "center";
+                            checkmark.style.justifyContent = "space-between";
+                            checkmark.style.gap = "10px";
 
-                            document.getElementById(`checkmark-${index}`).parentNode.appendChild(deleteButton);
+                            const deleteIcon = document.createElement('img');
+                            deleteIcon.src = 'bin.png';
+                            deleteIcon.alt = 'Eliminar';
+                            deleteIcon.className = 'delete-icon';
+                            deleteIcon.onclick = () => removeImage(file, index);
+
+                            checkmark.appendChild(deleteIcon);
+
                         }
 
                         // Enable/disable the "Subir" button based on valid files count
@@ -500,6 +648,9 @@
                 // Enable/disable the upload button based on valid file count
                 document.getElementById("uploadBtn").disabled = validFileQueue.length === 0;
             }, 500);  // Match the duration of the fade-out transition (500ms)
+
+            document.getElementById("uploadBtn").disabled = validFileQueue.length === 0;
+
         }
 
 
@@ -543,7 +694,7 @@
                     if (!lat || !lon) {
                         failCount++;
                         errors.push(`${file.name}: Missing GPS data`);
-                        document.getElementById(`error-${index}`).innerHTML = '❌ Faltan datos GPS<br><a href="https://support.google.com/photos/answer/9921876?sjid=17219850777604204969-EU#zippy target="_blank">Como activar la ubicación al hacer las fotos</a>';
+                        document.getElementById(`error-${index}`).innerHTML = '❌ Foto sin subir<br>Faltan datos GPS<br><a href="https://support.google.com/photos/answer/9921876?sjid=17219850777604204969-EU#zippy target="_blank">Como activar la ubicación al hacer las fotos</a>';
                         document.getElementById(`progressBar-${index}`).style.display = "none"; // Hide the progress bar if no GPS data
                         resolve();
                         return;
