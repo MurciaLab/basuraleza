@@ -509,7 +509,7 @@
                                 <div class="error-message">
                                     ❌ Esta foto no se subirá. Falta ubicación GPS
                                     <p><a href="https://support.google.com/photos/answer/9921876?sjid=17219850777604204969-EU#zippy" target="_blank">
-                                        Cómo activar la ubicación
+                                        Como activar la ubicación
                                     </a></p>
                                 </div>
                             `;
@@ -624,7 +624,14 @@
                     if (!lat || !lon) {
                         failCount++;
                         errors.push(`${file.name}: Missing GPS data`);
-                        document.getElementById(`error-${index}`).innerHTML = '❌ Foto sin subir. Faltan datos GPS<p><a href="https://support.google.com/photos/answer/9921876?sjid=17219850777604204969-EU#zippy target="_blank">Como activar la ubicación al hacer las fotos</a></p>';
+                        document.getElementById(`error-${index}`).innerHTML = `
+                                <div class="error-message">
+                                    ❌ Foto sin subir. Falta ubicación GPS
+                                    <p><a href="https://support.google.com/photos/answer/9921876?sjid=17219850777604204969-EU#zippy" target="_blank">
+                                        Como activar la ubicación
+                                    </a></p>
+                                </div>
+                            `;
                         document.getElementById(`progressBar-${index}`).style.display = "none"; // Hide the progress bar if no GPS data
                         resolve();
                         return;
