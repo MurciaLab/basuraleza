@@ -117,6 +117,9 @@
             gap: 10px;
             margin-top: 20px;
             width: 100%;
+            max-width: 600px; /* consistent container width */
+            margin-left: auto;
+            margin-right: auto;
         }
     
         .thumbnail {
@@ -129,16 +132,18 @@
     
         .thumbnail-container {
             display: flex;
+            flex-direction: row; /* keep row but restrict width */
             align-items: center;
             justify-content: center;
-            width: 30%;
-            max-width: 500px;
+            width: 100%;
+            max-width: 100%;
             border: 0.5px solid #8f8f8d;
             border-radius: 10px;
             padding: 5px;
             background-color: #F0EDE5;
             transition: opacity 0.5s ease, pointer-events 0.5s ease;
         }
+
     
         .thumbnail-container.fade-out,
         .fade-out {
@@ -300,6 +305,10 @@
         @media (max-width: 600px) {
             .logo {
                 width: 120px;
+            }
+
+            .murcialab-logo {
+                height: 55px;
             }
     
             h2 {
@@ -572,12 +581,7 @@
             document.getElementById("uploadBtn").disabled = validFileQueue.length === 0;
 
         }
-
-
-
-
-
-
+        
         // Upload the images when the button is clicked
         document.getElementById("uploadBtn").addEventListener("click", async function () {
             document.getElementById("uploadBtn").disabled = true;
