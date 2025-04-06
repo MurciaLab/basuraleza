@@ -178,12 +178,16 @@
     
         .error {
             color: #E74C3C;
-            font-size: 0.9em;
-            margin-right: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 10px;
+            display: none;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 8px;
+            font-weight: bold;
+            font-size: 1.25rem;
+        }
+
+        .error p {
+            margin: 0;
         }
     
         .error-message {
@@ -346,6 +350,8 @@
     
             p {
                 font-size: 0.95rem;
+                padding: 0;
+                margin: 0;
             }
     
             ul {
@@ -501,7 +507,7 @@
                             // Mark as invalid photo
                             document.getElementById(`error-${index}`).innerHTML = `
                                 <div class="error-message">
-                                    <p>❌ Esta foto no se subirá<br>Faltan datos GPS</p>
+                                    ❌ Esta foto no se subirá. Falta ubicación GPS
                                     <p><a href="https://support.google.com/photos/answer/9921876?sjid=17219850777604204969-EU#zippy" target="_blank">
                                         Cómo activar la ubicación
                                     </a></p>
@@ -581,7 +587,7 @@
             document.getElementById("uploadBtn").disabled = validFileQueue.length === 0;
 
         }
-        
+
         // Upload the images when the button is clicked
         document.getElementById("uploadBtn").addEventListener("click", async function () {
             document.getElementById("uploadBtn").disabled = true;
@@ -618,7 +624,7 @@
                     if (!lat || !lon) {
                         failCount++;
                         errors.push(`${file.name}: Missing GPS data`);
-                        document.getElementById(`error-${index}`).innerHTML = '❌ Foto sin subir<br>Faltan datos GPS<br><a href="https://support.google.com/photos/answer/9921876?sjid=17219850777604204969-EU#zippy target="_blank">Como activar la ubicación al hacer las fotos</a>';
+                        document.getElementById(`error-${index}`).innerHTML = '❌ Foto sin subir. Faltan datos GPS<p><a href="https://support.google.com/photos/answer/9921876?sjid=17219850777604204969-EU#zippy target="_blank">Como activar la ubicación al hacer las fotos</a></p>';
                         document.getElementById(`progressBar-${index}`).style.display = "none"; // Hide the progress bar if no GPS data
                         resolve();
                         return;
