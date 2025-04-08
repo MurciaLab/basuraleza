@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Basuraleza</title>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
     <style>
@@ -211,6 +212,10 @@
             margin-top: 5px;
             display: none;
         }
+
+        .check {
+            width: 20px;
+        }
     
         .delete-icon {
             width: 50px;
@@ -371,7 +376,7 @@
         <div class="modal-content">
             <span class="close" onclick="closeModal('infoModal')">&times;</span>
             <h2>Basuraleza</h2>
-            <img src="foto-basuraleza.jpeg" alt="Basuraleza" class="foto-basuraleza">
+            <img src="images/foto-basuraleza.jpeg" alt="Basuraleza" class="foto-basuraleza">
             <p>Es un esfuerzo por combatir la problemática de los residuos abandonados en nuestro entorno, poniendo el foco en la <b>participación activa de los vecinos</b> mediante una herramienta tan sencilla como efectiva: </p>
             <p>Una página web que permite a cualquier ciudadano fotografiar puntos de acumulación de residuos y subirlos.</p>
             <p>Todas las fotos aportadas serán marcadas en un mapa del municipio</p>
@@ -386,6 +391,9 @@
                 <h2>¿Por qué incluir la ubicación en la foto?</h2>
                 <p>Al final del proyecto, se generará un mapa con todos los puntos calientes gracias a las coordenadas GPS incluidas en la foto. Por esto, es indispensable tomar la fotografía con la ubicación activada en nuestro dispositivo móvil.</p>
                 
+                <h2>Privacidad</h2>
+                <p>Se usará la fecha y las coordenadas de la foto, junto a la foto en sí misma. No se guarda ninguna información relacionada al usuario, siendo totalmente anónima la participación en el proyecto.</p>
+
                 <h2>¿Cómo activo la ubicación en mi cámara?</h2>
                 <p>El procedimiento varía según el dispositivo. A continuación, se indica cómo hacerlo en los distintos modelos:</p>
                 <ul>
@@ -418,7 +426,7 @@
         </div>
     </div>
 
-    <img src="logo-basuraleza.jpg" alt="MurciaLab Logo" class="logo">
+    <img src="images/logo-basuraleza.jpg" alt="Logo basuraleza" class="logo">
     <h2>Basuraleza</h2>
 
     <label for="fileInput" class="upload-btn">Seleccionar fotos</label>
@@ -431,7 +439,7 @@
     <footer class="footer">
         <span class="credit-text">Un proyecto de</span>
         <a href="https://murcialab.org" target="_blank" class="credit-link">
-            <img src="MurciaLab-logo.png" alt="MurciaLab logo" class="murcialab-logo">
+            <img src="images/MurciaLab-logo.png" alt="MurciaLab logo" class="murcialab-logo">
         </a>
     </footer>
 
@@ -523,7 +531,7 @@
                             errorContainer.style.gap = "10px";
 
                             const deleteIcon = document.createElement('img');
-                            deleteIcon.src = 'bin.png';
+                            deleteIcon.src = 'images/bin.png';
                             deleteIcon.alt = 'Eliminar';
                             deleteIcon.className = 'delete-icon';
                             deleteIcon.onclick = () => removeImage(file, index);
@@ -542,7 +550,7 @@
                             checkmark.style.gap = "10px";
 
                             const deleteIcon = document.createElement('img');
-                            deleteIcon.src = 'bin.png';
+                            deleteIcon.src = 'images/bin.png';
                             deleteIcon.alt = 'Eliminar';
                             deleteIcon.className = 'delete-icon';
                             deleteIcon.onclick = () => removeImage(file, index);
