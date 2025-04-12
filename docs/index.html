@@ -666,7 +666,7 @@
 
                     validFileQueue.push(file); // Add valid file to the validFileQueue
 
-                    const compressedFile = await resizeAndCompressImagePreservingExif(file, 1024);
+                    const compressedFile = file
                     const reader = new FileReader();
 
                     // Set the name manually if it's missing
