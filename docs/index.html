@@ -24,6 +24,7 @@
 
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
@@ -665,7 +666,7 @@
 
                     validFileQueue.push(file); // Add valid file to the validFileQueue
 
-                    const compressedFile = await resizeAndCompressImage(file, 1024);
+                    const compressedFile = await resizeAndCompressImagePreservingExif(file, 1024);
                     const reader = new FileReader();
 
                     // Set the name manually if it's missing
@@ -753,6 +754,67 @@
                     canvas.toBlob(function (blob) {
                         resolve(blob);
                     }, file.type, 0.7);
+                };
+
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function resizeAndCompressImagePreservingExif(file, maxSize) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+
+                reader.onload = function (event) {
+                    const originalDataURL = event.target.result;
+
+                    // Extract EXIF from original
+                    let exifObj = piexif.load(originalDataURL);
+                    let exifBytes = piexif.dump(exifObj);
+
+                    const img = new Image();
+                    img.src = originalDataURL;
+
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > maxSize) {
+                                height *= maxSize / width;
+                                width = maxSize;
+                            }
+                        } else {
+                            if (height > maxSize) {
+                                width *= maxSize / height;
+                                height = maxSize;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        const compressedDataURL = canvas.toDataURL(file.type, 0.7);
+
+                        // Insert EXIF back into the new DataURL
+                        const newDataURLWithExif = piexif.insert(exifBytes, compressedDataURL);
+
+                        // Convert DataURL back to Blob
+                        const byteString = atob(newDataURLWithExif.split(',')[1]);
+                        const mimeString = newDataURLWithExif.split(',')[0].split(':')[1].split(';')[0];
+
+                        const ab = new ArrayBuffer(byteString.length);
+                        const ia = new Uint8Array(ab);
+                        for (let i = 0; i < byteString.length; i++) {
+                            ia[i] = byteString.charCodeAt(i);
+                        }
+
+                        const newBlob = new Blob([ab], { type: mimeString });
+                        resolve(newBlob);
+                    };
                 };
 
                 reader.readAsDataURL(file);
