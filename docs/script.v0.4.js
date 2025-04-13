@@ -7,6 +7,32 @@ let validFileQueue = []; // Array to track valid files for upload
 
 const googleScriptUrl = "https://api-basuraleza.luistt.es/";
 
+function gpsToDecimal(gpsData, ref) {
+    if (!Array.isArray(gpsData) || gpsData.length !== 3) return null;
+
+    const [degrees, minutes, seconds] = gpsData;
+    let decimal = degrees + minutes / 60 + seconds / 3600;
+    if (ref === "S" || ref === "W") {
+        decimal = -decimal;
+    }
+    return decimal;
+}
+
+function isValidGPS(lat, lon, latRef, lonRef) {
+    const decimalLat = gpsToDecimal(lat, latRef);
+    const decimalLon = gpsToDecimal(lon, lonRef);
+
+    return (
+        typeof decimalLat === "number" &&
+        typeof decimalLon === "number" &&
+        !isNaN(decimalLat) && !isNaN(decimalLon) &&
+        decimalLat !== 0 && decimalLon !== 0 &&
+        decimalLat >= -90 && decimalLat <= 90 &&
+        decimalLon >= -180 && decimalLon <= 180
+    );
+}
+
+
 document.getElementById("infoBtn").addEventListener("click", function() {
     document.getElementById("infoModal").style.display = "flex";
 });
@@ -63,19 +89,14 @@ async function checkGPSData(file, index) {
             EXIF.getData(file, function () {
                 const lat = EXIF.getTag(this, "GPSLatitude");
                 const lon = EXIF.getTag(this, "GPSLongitude");
+                const latRef = EXIF.getTag(this, "GPSLatitudeRef");
+                const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
+
 
                 const datetimeOriginal = EXIF.getTag(this, "DateTimeOriginal");
                 file.datetimeOriginal = datetimeOriginal;  // Attach it to the file object
-
-                function isValidGPS(lat, lon) {
-                    // Check if lat and lon are numbers and are within valid ranges
-                    return typeof lat === 'number' && typeof lon === 'number' &&
-                        lat !== 0 && lon !== 0 &&  // Ensure it's not (0, 0)
-                        lat >= -90 && lat <= 90 &&  // Latitude should be between -90 and 90
-                        lon >= -180 && lon <= 180; // Longitude should be between -180 and 180
-                }
     
-                if (!isValidGPS(lat, lon)) {
+                if (!isValidGPS(lat, lon, latRef, lonRef)) {
                     // Mark as invalid photo
                     document.getElementById(`error-${index}`).innerHTML = `
                         <div class="error-message">
@@ -192,17 +213,11 @@ async function uploadFile(file, index) {
         EXIF.getData(file, async function () {
             const lat = EXIF.getTag(this, "GPSLatitude");
             const lon = EXIF.getTag(this, "GPSLongitude");
+            const latRef = EXIF.getTag(this, "GPSLatitudeRef");
+            const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
             const datetimeOriginal = EXIF.getTag(this, "DateTimeOriginal");
 
-            function isValidGPS(lat, lon) {
-                // Check if lat and lon are numbers and are within valid ranges
-                return typeof lat === 'number' && typeof lon === 'number' &&
-                    lat !== 0 && lon !== 0 &&  // Ensure it's not (0, 0)
-                    lat >= -90 && lat <= 90 &&  // Latitude should be between -90 and 90
-                    lon >= -180 && lon <= 180; // Longitude should be between -180 and 180
-            }
-
-            if (!isValidGPS(lat, lon)) {
+            if (!isValidGPS(lat, lon, latRef, lonRef)) {
                 failCount++;
                 errors.push(`${file.name}: Missing GPS data`);
                 document.getElementById(`error-${index}`).innerHTML = `
