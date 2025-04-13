@@ -67,13 +67,7 @@ async function checkGPSData(file, index) {
                 const datetimeOriginal = EXIF.getTag(this, "DateTimeOriginal");
                 file.datetimeOriginal = datetimeOriginal;  // Attach it to the file object
 
-                function isValidGPS(lat, lon) {
-                    return Array.isArray(lat) && Array.isArray(lon) &&
-                        lat.length > 0 && lon.length > 0 &&
-                        lat.some(coord => coord > 0) && lon.some(coord => coord > 0);
-                }
-
-                if (!isValidGPS(lat, lon)) {
+                if (!lat || !lon) {
                     // Mark as invalid photo
                     document.getElementById(`error-${index}`).innerHTML = `
                         <div class="error-message">
@@ -192,13 +186,7 @@ async function uploadFile(file, index) {
             const lon = EXIF.getTag(this, "GPSLongitude");
             const datetimeOriginal = EXIF.getTag(this, "DateTimeOriginal");
 
-            function isValidGPS(lat, lon) {
-                return Array.isArray(lat) && Array.isArray(lon) &&
-                    lat.length > 0 && lon.length > 0 &&
-                    lat.some(coord => coord > 0) && lon.some(coord => coord > 0);
-            }
-
-            if (!isValidGPS(lat, lon)) {
+            if (!lat || !lon) {
                 failCount++;
                 errors.push(`${file.name}: Missing GPS data`);
                 document.getElementById(`error-${index}`).innerHTML = `
