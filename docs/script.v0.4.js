@@ -45,6 +45,8 @@ function closeModal(id) {
     document.getElementById(id).style.display = "none";
 }
 
+window.closeModal = closeModal;
+
 // Enable the upload button only when files are selected
 document.getElementById('fileInput').addEventListener('change', async function () {
     const thumbnails = document.getElementById("thumbnails");
