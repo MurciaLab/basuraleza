@@ -1,20 +1,27 @@
 Script python que lee las imágenes de una carpeta y genera un mapa, mostrando una chincheta con una miniatura, en la coordenada GPS que hay en los metadatos de la imagen.
 
 Uso:
-    python3 crearMapa.py [-h] [-s {1,2}] [-d DIRECTORY] [-n NAME] [-t {1,2,3}] [-v]
+    python3 crearMapa.py [-h] [-s {1,2}] [-d DIRECTORY] [-n NAME] [-t {1,2,3}] [--no-thumbnails] [-v]
 
     -h, --help            
         Muestra la ayuda
     -s {1,2}, --source {1,2}
-        Origen de las imágenes: 1 para directorio local, 2 para Google Drive (default: 1)
+        Origen de las imágenes: (default: 1)
+            1 para directorio local 
+            2 para Google Drive 
     -d DIRECTORY, --directory DIRECTORY
         Directorio local de imágenes (para source=1) o ID de carpeta de Google Drive (para source=2) (default:./imagenes)
     -n NAME, --name NAME  
         Nombre base para los archivos de mapa generados (sin extensión) (default: images_map)
     -t {1,2,3}, --type {1,2,3}
-        Tipo de mapa a generar: 1 para HTML, 2 para GPX, 3 para KML. Si no se especifica, genera los tres tipos (default: 0)
+        Tipo de mapa a generar. Si no se especifica, genera los tres tipos 
+            1 para HTML 
+            2 para GPX
+            3 para KML. 
+    --no-thumbnails       
+        Generar mapa HTML sin miniaturas (solo chinchetas). Si no se indica, genera el mapa completo.
     -v, --verbose         
-        Mostrar información detallada durante la ejecución(default: False)
+        Mostrar información detallada durante la ejecución 
 
 
 Instalación de dependencias necesarias.
