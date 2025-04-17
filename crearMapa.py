@@ -225,7 +225,17 @@ def get_images_from_folder(folder_path):
     print(f"Se cargaron {len(images)} imágenes.")
     return images
 
-def create_folium_map(image_data_list, output_file="images_map.html"):
+def format_fecha_exif(fecha_exif):
+    """Convierte fecha EXIF (YYYY:MM:DD HH:MM:SS) a formato dd/mm/yyyy"""
+    try:
+        # Ejemplo de fecha EXIF: "2023:05:15 14:30:00"
+        fecha_str = fecha_exif.split()[0]  # Obtiene "2023:05:15"
+        year, month, day = fecha_str.split(':')
+        return f"{day}/{month}/{year}"  # Formato español
+    except:
+        return fecha_exif  # Si falla, devuelve el valor original
+
+def create_folium_map(image_data_list, output_file="images_map.html", no_thumbnails=False):
     """Crea un mapa interactivo con Folium"""
     # Encontrar el punto central para el mapa
     valid_coords = [coords for _, coords, _, _ in image_data_list if coords]
@@ -241,37 +251,43 @@ def create_folium_map(image_data_list, output_file="images_map.html"):
     
     for img_name, coords, img_obj, exif_info in image_data_list:
         if coords:
-            # Convertir imagen a base64 para incrustarla en el popup
-            buffered = io.BytesIO()
-            img_obj.copy().thumbnail((300, 300))  # Redimensionar para el popup
-            img_obj.save(buffered, format="JPEG")
-            img_str = base64.b64encode(buffered.getvalue()).decode()
-            
-            # Construir HTML para el popup con información EXIF
-            html = f"""
-            <div style="max-width:320px; font-family:Arial, sans-serif;">
-                <h3 style="margin-bottom:5px;">{img_name}</h3>
-                <img src="data:image/jpeg;base64,{img_str}" style="width:100%; max-width:300px; margin:5px 0;">
-                <div style="font-size:12px;">
-                    <p style="margin:2px 0;"><strong>Coordenadas:</strong> {coords[0]:.6f}, {coords[1]:.6f}</p>
-            """
-            
-            # Añadir información EXIF disponible
-            for key, value in exif_info.items():
-                html += f'<p style="margin:2px 0;"><strong>{key}:</strong> {value}</p>'
+            # Obtener fecha de captura o usar nombre de archivo como fallback
+            fecha_raw = exif_info.get('Fecha', img_name)  # Usa 'Fecha' EXIF o el nombre si no hay fecha
+            fecha = format_fecha_exif(fecha_raw)
+
+            if no_thumbnails:
+                # Modo solo chinchetas: título = fecha
+                marker = folium.Marker(
+                    location=coords,
+                    popup=fecha,  # Solo muestra la fecha como popup
+                    tooltip=fecha  # También en el tooltip
+                ).add_to(marker_cluster)
+            else:
+                # Modo con miniaturas: título = fecha (sin otros datos)
+                img_copy = img_obj.copy()
+                img_copy.thumbnail((300, 300), Image.LANCZOS)
                 
-            html += """
+                buffered = io.BytesIO()
+                img_copy.save(buffered, format="JPEG", quality=85)
+                img_str = base64.b64encode(buffered.getvalue()).decode()
+                
+                # Popup con solo la miniatura y la fecha 
+                html = f"""
+                <div style="max-width:300px;">
+                    <img src="data:image/jpeg;base64,{img_str}" style="width:100%;">
+                    <p style="text-align:center; margin-top:5px;"><strong>{fecha}</strong></p>
                 </div>
-            </div>
-            """
+                """
             
-            iframe = folium.IFrame(html=html, width=340, height=450)
-            popup = folium.Popup(iframe, max_width=340)
-            folium.Marker(
-                location=coords,
-                popup=popup,
-                tooltip=img_name
-            ).add_to(marker_cluster)
+                iframe = folium.IFrame(html=html, width=340, height=450 if not no_thumbnails else 150)
+                popup = folium.Popup(iframe, max_width=340)
+                marker = folium.Marker(
+                    location=coords,
+                    popup=popup,
+                    tooltip=img_name
+                )
+
+            marker.add_to(marker_cluster)
     
     map_obj.save(output_file)
     print(f"Mapa HTML generado: {output_file}")
@@ -459,16 +475,19 @@ def parse_arguments():
     )
     
     parser.add_argument('-s', '--source', type=int, choices=[1, 2], default=1,
-                        help='Origen de las imágenes: 1 para directorio local, 2 para Google Drive')
+                        help='Origen de las imágenes: 1 para directorio local, 2 para Google Drive.')
     
     parser.add_argument('-d', '--directory', type=str, default='./imagenes',
-                        help='Directorio local de imágenes (para source=1) o ID de carpeta de Google Drive (para source=2)')
+                        help='Directorio local de imágenes (para source=1) o ID de carpeta de Google Drive (para source=2).')
     
     parser.add_argument('-n', '--name', type=str, default='images_map',
-                        help='Nombre base para los archivos de mapa generados (sin extensión)')
+                        help='Nombre base para los archivos de mapa generados (sin extensión).')
     
     parser.add_argument('-t', '--type', type=int, choices=[1, 2, 3], default=0,
-                        help='Tipo de mapa a generar: 1 para HTML, 2 para GPX, 3 para KML. Si no se especifica, genera los tres tipos')
+                        help='Tipo de mapa a generar: 1 para HTML, 2 para GPX, 3 para KML. Si no se especifica, genera los tres tipos.')
+    
+    parser.add_argument('--no-thumbnails', action='store_true',
+                        help='Generar mapa HTML sin miniaturas (solo chinchetas)')
     
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Mostrar información detallada durante la ejecución')
@@ -500,6 +519,7 @@ def main():
         print(f"- {'Directorio' if args.source == 1 else 'ID de carpeta'}: {args.directory}")
         print(f"- Nombre base: {args.name}")
         print(f"- Tipo(s) de mapa: {args.type if args.type > 0 else 'Todos'}")
+        print(f"- Sin miniaturas: {'Sí' if args.no_thumbnails else 'No'}")
         print("")
     
     temp_dir = None
@@ -552,7 +572,7 @@ def main():
         # Si no se especifica tipo, generar todos
         if args.type == 0 or args.type == 1:
             html_file = f"{args.name}.html"
-            file = create_folium_map(image_data_list, html_file)
+            file = create_folium_map(image_data_list, html_file, args.no_thumbnails)
             files_generated.append(file)
         
         if args.type == 0 or args.type == 2:
@@ -565,7 +585,7 @@ def main():
             file = create_kml(image_data_list, kml_file)
             files_generated.append(file)
         
-        print("\n¡Proceso completado exitosamente!")
+        print("\n¡Proceso completado con éxito!")
         print(f"Archivos generados: {', '.join(files_generated)}")
     
     finally:
