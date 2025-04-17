@@ -1,0 +1,356 @@
+
+body {
+    font-family: 'Montserrat', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4eb;
+    color: #363635;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    height: 100vh;
+    text-align: center;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+.logo {
+    width: 150px;
+    display: block;
+    margin: 20px auto 0;
+}
+
+.logo.fixed {
+    left: 20px;
+    top: 10px;
+    transform: none;
+}
+
+.banner {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 10px;
+    background-color: #8AAA41;
+    color: white;
+    width: 100%;
+    z-index: 100;
+    position: relative;
+}
+
+.banner .small-btn {
+    z-index: 150;
+}
+
+.small-btn {
+    padding: 5px 12px;
+    font-size: 14px;
+    background-color: #8AAA41;
+    color: white;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.small-btn:hover {
+    background-color: #7b8c34;
+}
+
+.small-btn:focus {
+    outline: none;
+}
+
+.button-container {
+    display: flex;
+    gap: 10px;
+    position: absolute;
+    top: 20px;
+    left: 10px;
+}
+
+.upload-btn {
+    padding: 10px 25px;
+    background-color: #8AAA41;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin: 20px auto 0;
+    display: block;
+}
+
+.upload-btn:hover {
+    background-color: #7b8c34;
+}
+
+.upload-btn:disabled {
+    background-color: #B0BEC5;
+    cursor: not-allowed;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+h2 {
+    color: #363635;
+    margin: 0 0 20px;
+}
+
+#thumbnails {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 600px; /* consistent container width */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.thumbnail {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.thumbnail-container {
+    display: flex;
+    flex-direction: row; /* keep row but restrict width */
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 100%;
+    border: 0.5px solid #8f8f8d;
+    border-radius: 10px;
+    padding: 5px;
+    background-color: #F0EDE5;
+    transition: opacity 0.5s ease, pointer-events 0.5s ease;
+}
+
+
+.thumbnail-container.fade-out,
+.fade-out {
+    opacity: 0;
+    transform: scale(0.9);
+    pointer-events: none;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.info {
+    flex-grow: 1;
+    margin-left: 20px;
+    text-align: left;
+}
+
+.progressBar {
+    width: 100%;
+    height: 8px;
+    background: #ecf0f1;
+    border-radius: 5px;
+    margin-top: 5px;
+    display: none;
+}
+
+.progressFill {
+    height: 100%;
+    width: 0;
+    background: #8AAA41;
+    border-radius: 5px;
+    transition: width 0.3s ease;
+}
+
+.error {
+    color: #E74C3C;
+    display: none;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 8px;
+    font-weight: bold;
+    font-size: 1.25rem;
+}
+
+.error p {
+    margin: 0;
+}
+
+.error-message {
+    flex: 1;
+    text-align: left;
+}
+
+.checkmark {
+    display: none;
+    color: #8AAA41;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 8px;
+    font-weight: bold;
+    font-size: 1.25rem;
+}
+
+.success-message {
+    color: #8AAA41;
+    font-size: 1em;
+    margin-top: 5px;
+    display: none;
+}
+
+.check {
+    width: 20px;
+}
+
+.delete-icon {
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    margin-top: 4px;
+}
+
+.delete-icon:hover {
+    transform: scale(1.2);
+}
+
+.delete-btn:disabled {
+    background-color: #e74c3c;
+    cursor: not-allowed;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 8px;
+    max-width: 90%;
+    max-height: 90%;
+    overflow-y: auto;
+    position: relative;
+    box-sizing: border-box;
+    text-align: left;
+    margin: 0 auto;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h2 {
+    text-align: center;
+}
+
+ul li {
+    list-style-position: inside;
+}
+
+.close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 30px;
+    cursor: pointer;
+    color: #333;
+}
+
+.foto-basuraleza {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 20px auto;
+    display: block;
+    object-fit: cover;
+}
+
+.footer {
+    text-align: center;
+    padding: 16px;
+    font-size: 14px;
+    color: #777;
+    background-color: #f4f4eb;
+    margin-top: auto;
+}
+
+.credit-text {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.murcialab-logo {
+    height: 90px;
+    vertical-align: middle;
+    transition: opacity 0.3s ease;
+}
+
+.credit-link:hover .murcialab-logo {
+    opacity: 0.8;
+}
+
+@media (max-width: 600px) {
+    .logo {
+        width: 120px;
+    }
+
+    .murcialab-logo {
+        height: 55px;
+    }
+
+    h2 {
+        font-size: 1.25rem;
+    }
+
+    .upload-btn {
+        font-size: 16px;
+        padding: 8px 20px;
+    }
+
+    .thumbnail-container {
+        width: 90%;
+    }
+
+    .thumbnail {
+        width: 100px;
+        height: 100px;
+    }
+
+    .button-container {
+        top: 10px;
+        left: 5px;
+        gap: 5px;
+    }
+
+    .small-btn {
+        font-size: 12px;
+        padding: 4px 10px;
+    }
+
+    .modal-content {
+        max-width: 95%;
+    }
+
+    p {
+        font-size: 0.95rem;
+        padding: 0;
+        margin: 0;
+    }
+
+    ul {
+        padding-left: 25px;
+    }
+}
