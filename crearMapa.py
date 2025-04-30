@@ -76,117 +76,13 @@ def get_decimal_coordinates(gps_info):
 
 def get_readable_exif(exif_data):
     """Extrae información EXIF útil en formato legible"""
-    exif_info = {}
-    
-    # Función auxiliar para convertir cualquier valor a string de forma segura
-    def safe_str(value):
-        """Convierte cualquier valor a string de forma segura"""
-        if hasattr(value, 'numerator') and hasattr(value, 'denominator'):
-            # Es un IFDRational
-            num = value.numerator
-            den = value.denominator
-            if den == 0:
-                return "0"
-            elif num == 0:
-                return "0"
-            elif den == 1:
-                return str(num)
-            elif num > den and den != 0:
-                return f"{num/den:.2f}"
-            else:
-                return f"{num}/{den}"
-        elif isinstance(value, tuple) and len(value) == 2:
-            # Es una tupla que representa una fracción
-            num, den = value
-            if den == 0:
-                return "0"
-            elif num == 0:
-                return "0"
-            elif den == 1:
-                return str(num)
-            elif num > den and den != 0:
-                return f"{num/den:.2f}"
-            else:
-                return f"{num}/{den}"
-        else:
-            # Otro tipo
-            return str(value)
+    exif_info = {}    
     
     # Fecha y hora
     if 'DateTimeOriginal' in exif_data:
         exif_info['Fecha'] = str(exif_data['DateTimeOriginal'])
     elif 'DateTime' in exif_data:
-        exif_info['Fecha'] = str(exif_data['DateTime'])
-    
-    # Cámara y lente
-    if 'Make' in exif_data:
-        exif_info['Marca'] = str(exif_data['Make'])
-    if 'Model' in exif_data:
-        exif_info['Modelo'] = str(exif_data['Model'])
-    if 'LensMake' in exif_data:
-        exif_info['Marca Lente'] = str(exif_data['LensMake'])
-    if 'LensModel' in exif_data:
-        exif_info['Modelo Lente'] = str(exif_data['LensModel'])
-        
-    # Configuración de captura
-    if 'ExposureTime' in exif_data:
-        if hasattr(exif_data['ExposureTime'], 'numerator') and hasattr(exif_data['ExposureTime'], 'denominator'):
-            num = exif_data['ExposureTime'].numerator
-            den = exif_data['ExposureTime'].denominator
-            if num == 1 and den > 1:
-                exposure = f"1/{den}s"
-            else:
-                exposure = f"{safe_str(exif_data['ExposureTime'])}s"
-        elif isinstance(exif_data['ExposureTime'], tuple):
-            num, den = exif_data['ExposureTime']
-            if num == 1 and den > 1:
-                exposure = f"1/{den}s"
-            else:
-                exposure = f"{num}/{den}s"
-        else:
-            exposure = f"{exif_data['ExposureTime']}s"
-        exif_info['Velocidad'] = exposure
-        
-    if 'FNumber' in exif_data:
-        exif_info['Apertura'] = f"f/{safe_str(exif_data['FNumber'])}"
-        
-    if 'ISOSpeedRatings' in exif_data:
-        exif_info['ISO'] = str(exif_data['ISOSpeedRatings'])
-        
-    if 'FocalLength' in exif_data:
-        exif_info['Distancia Focal'] = f"{safe_str(exif_data['FocalLength'])}mm"
-        
-    # Resolución
-    if 'ExifImageWidth' in exif_data and 'ExifImageHeight' in exif_data:
-        exif_info['Resolución'] = f"{exif_data['ExifImageWidth']}x{exif_data['ExifImageHeight']}"
-    elif 'ImageWidth' in exif_data and 'ImageLength' in exif_data:
-        exif_info['Resolución'] = f"{exif_data['ImageWidth']}x{exif_data['ImageLength']}"
-    
-    # GPS Altitud
-    if 'GPSInfo' in exif_data and 'GPSAltitude' in exif_data['GPSInfo']:
-        alt_ref = exif_data['GPSInfo'].get('GPSAltitudeRef', 0)
-        altitude = exif_data['GPSInfo']['GPSAltitude']
-        
-        # Convertir la altitud a un valor decimal
-        alt_value = 0
-        if hasattr(altitude, 'numerator') and hasattr(altitude, 'denominator'):
-            if altitude.denominator != 0:
-                alt_value = altitude.numerator / altitude.denominator
-        elif isinstance(altitude, tuple) and len(altitude) == 2:
-            num, den = altitude
-            if den != 0:
-                alt_value = num / den
-        else:
-            try:
-                alt_value = float(altitude)
-            except (ValueError, TypeError):
-                alt_value = 0
-                
-        # Si alt_ref es 1, la altitud es negativa (bajo el nivel del mar)
-        if alt_ref == 1:
-            alt_value = -alt_value
-            
-        exif_info['Altitud'] = f"{alt_value:.1f}m"
+        exif_info['Fecha'] = str(exif_data['DateTime'])            
     
     return exif_info
 
