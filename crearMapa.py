@@ -1,6 +1,7 @@
 import os
 import folium
 from folium.plugins import MarkerCluster
+from folium.plugins import HeatMap
 import simplekml
 import gpxpy
 import gpxpy.gpx
@@ -108,7 +109,54 @@ def get_images_from_folder(folder_path):
     print(f"Se cargaron {len(images)} imágenes.")
     return images
 
-def create_folium_map(image_data_list, output_file="images_map.html"):
+icon_create_function = """
+function(cluster) {
+    var count = cluster.getChildCount();
+    var color = '#FFA500'; // orange
+
+    if (count < 10) {
+        color = '#FFA500'; // light orange
+    } else if (count < 30) {
+        color = '#FF7F50'; // coral
+    } else if (count < 60) {
+        color = '#FF4500'; // orange red
+    } else {
+        color = '#B22222'; // dark red
+    }
+
+    return new L.DivIcon({
+        html: '<div style="background-color:' + color + '; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">' +
+              '<span style="color:white; font-weight:bold;">' + count + '</span></div>',
+        className: 'marker-cluster',
+        iconSize: new L.Point(40, 40)
+    });
+}
+"""
+
+legend_html = """
+<div style="
+    position: fixed; 
+    bottom: 30px; left: 30px; width: 180px; height: 140px; 
+    background-color: white; border:2px solid grey; z-index:9999; 
+    font-size:14px; padding: 10px; border-radius: 8px;
+">
+<b>Cluster Size</b><br>
+<div style="background:#FFA500;width:20px;height:20px;display:inline-block;margin-right:5px;"></div>Small (1–9)<br>
+<div style="background:#FF7F50;width:20px;height:20px;display:inline-block;margin-right:5px;"></div>Medium (10–29)<br>
+<div style="background:#FF4500;width:20px;height:20px;display:inline-block;margin-right:5px;"></div>Large (30–59)<br>
+<div style="background:#B22222;width:20px;height:20px;display:inline-block;margin-right:5px;"></div>Very Large (60+)
+</div>
+"""
+
+
+def create_folium_map(image_data_list, output_file="images_map.html", include_heatmap=False):
+
+    icon = folium.CustomIcon(
+        icon_image='waste-icon.png',  # Path to your icon
+        icon_size=(40, 40),      # Adjust size as needed
+        icon_anchor=(15, 15)     # Center anchor
+    )
+
     """Crea un mapa interactivo con Folium"""
     # Encontrar el punto central para el mapa
     valid_coords = [coords for _, coords, _ in image_data_list if coords]
@@ -119,9 +167,14 @@ def create_folium_map(image_data_list, output_file="images_map.html"):
     avg_lon = sum(lon for _, lon in valid_coords) / len(valid_coords)
     
     # Crear mapa
-    map_obj = folium.Map(location=[avg_lat, avg_lon], zoom_start=10)
-    marker_cluster = MarkerCluster().add_to(map_obj)
-    
+    map_obj = folium.Map(location=[avg_lat, avg_lon], zoom_start=10, tiles="Cartodb Positron")
+    marker_cluster = MarkerCluster(icon_create_function=icon_create_function).add_to(map_obj)   
+    map_obj.get_root().html.add_child(folium.Element(legend_html))
+
+    if include_heatmap:
+        heat_points = [coords for _, coords, _ in image_data_list if coords]
+        HeatMap(heat_points, radius=15, blur=10, min_opacity=0.4).add_to(map_obj)
+
     for img_name, coords, img_obj in image_data_list:
         if coords:
             # Convertir imagen a base64 para incrustarla en el popup
@@ -141,7 +194,8 @@ def create_folium_map(image_data_list, output_file="images_map.html"):
             folium.Marker(
                 location=coords,
                 popup=popup,
-                tooltip=img_name
+                tooltip=img_name,
+                icon=icon
             ).add_to(marker_cluster)
     
     map_obj.save(output_file)
@@ -390,7 +444,7 @@ def main():
         # Si no se especifica tipo, generar todos
         if args.type == 0 or args.type == 1:
             html_file = f"{args.name}.html"
-            file = create_folium_map(image_data_list, html_file)
+            file = create_folium_map(image_data_list, html_file, include_heatmap=True)
             files_generated.append(file)
         
         if args.type == 0 or args.type == 2:
