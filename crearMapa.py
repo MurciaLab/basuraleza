@@ -134,73 +134,166 @@ function(cluster) {
 """
 
 legend_html = """
-<div style="
-    position: fixed; 
-    bottom: 30px; left: 30px; width: 180px; height: 140px; 
-    background-color: white; border:2px solid grey; z-index:9999; 
-    font-size:14px; padding: 10px; border-radius: 8px;
+<div id="cluster-legend" style="
+    position: fixed;
+    top: 110px;
+    right: 10px;
+    width: 180px;
+    background-color: white;
+    border: 1px solid rgba(0,0,0,0.2);
+    z-index: 999;
+    font-size: 14px;
+    padding: 10px;
+    border-radius: 4px;
+    display: none;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.4);
 ">
-<b>Cluster Size</b><br>
-<div style="background:#FFA500;width:20px;height:20px;display:inline-block;margin-right:5px;"></div>Small (1–9)<br>
-<div style="background:#FF7F50;width:20px;height:20px;display:inline-block;margin-right:5px;"></div>Medium (10–29)<br>
-<div style="background:#FF4500;width:20px;height:20px;display:inline-block;margin-right:5px;"></div>Large (30–59)<br>
-<div style="background:#B22222;width:20px;height:20px;display:inline-block;margin-right:5px;"></div>Very Large (60+)
+<b>Tamaño de grupo</b><br>
+<div style=\"background:#FFA500;width:20px;height:20px;display:inline-block;margin-right:5px;\"></div>Pequeño (1–9)<br>
+<div style=\"background:#FF7F50;width:20px;height:20px;display:inline-block;margin-right:5px;\"></div>Mediano (10–29)<br>
+<div style=\"background:#FF4500;width:20px;height:20px;display:inline-block;margin-right:5px;\"></div>Grande (30–59)<br>
+<div style=\"background:#B22222;width:20px;height:20px;display:inline-block;margin-right:5px;\"></div>Muy grande (60+)
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const legend = document.getElementById("cluster-legend");
+
+    let map = null;
+
+    for (let key in window) {
+        if (window[key] instanceof L.Map) {
+            map = window[key];
+            break;
+        }
+    }
+
+    if (!map) return;
+
+    map.whenReady(function () {
+        // Check if the "📍 Imágenes Geolocalizadas" layer is active initially
+        let isActive = false;
+        map.eachLayer(function (layer) {
+            if (layer.getAttribution && layer.getAttribution() === "📍 Imágenes Geolocalizadas") {
+                isActive = true;
+            }
+        });
+
+        // Fallback: inspect _layers in the layer control
+        if (map._controlContainer) {
+            const checkboxes = map._controlContainer.querySelectorAll("input[type='checkbox']");
+            checkboxes.forEach((checkbox) => {
+                const label = checkbox.closest("label");
+                if (label && label.textContent.includes("📍 Imágenes Geolocalizadas") && checkbox.checked) {
+                    legend.style.display = "block";
+                }
+            });
+        }
+
+        // Dynamic changes
+        map.on("overlayadd", function (e) {
+            if (e.name === "📍 Imágenes Geolocalizadas") {
+                legend.style.display = "block";
+            }
+        });
+
+        map.on("overlayremove", function (e) {
+            if (e.name === "📍 Imágenes Geolocalizadas") {
+                legend.style.display = "none";
+            }
+        });
+    });
+});
+</script>
+
+
+
 """
 
 
-def create_folium_map(image_data_list, output_file="images_map.html", include_heatmap=False):
 
+def create_folium_map(image_data_list, output_file="images_map.html", include_heatmap=False):
+    """Crea un mapa interactivo con Folium con capas toggleables"""
+
+    # Crear icono personalizado
     icon = folium.CustomIcon(
-        icon_image='waste-icon.png',  # Path to your icon
-        icon_size=(40, 40),      # Adjust size as needed
-        icon_anchor=(15, 15)     # Center anchor
+        icon_image='waste-icon.png',
+        icon_size=(40, 40),
+        icon_anchor=(15, 15)
     )
 
-    """Crea un mapa interactivo con Folium"""
-    # Encontrar el punto central para el mapa
+    # Filtrar coordenadas válidas
     valid_coords = [coords for _, coords, _ in image_data_list if coords]
     if not valid_coords:
         return None
-    
+
     avg_lat = sum(lat for lat, _ in valid_coords) / len(valid_coords)
     avg_lon = sum(lon for _, lon in valid_coords) / len(valid_coords)
-    
-    # Crear mapa
-    map_obj = folium.Map(location=[avg_lat, avg_lon], zoom_start=10, tiles="Cartodb Positron")
-    marker_cluster = MarkerCluster(icon_create_function=icon_create_function).add_to(map_obj)   
-    map_obj.get_root().html.add_child(folium.Element(legend_html))
 
-    if include_heatmap:
-        heat_points = [coords for _, coords, _ in image_data_list if coords]
-        HeatMap(heat_points, radius=15, blur=10, min_opacity=0.4).add_to(map_obj)
+    # Crear mapa base
+    map_obj = folium.Map(
+        location=[avg_lat, avg_lon],
+        zoom_start=10,
+        tiles=None  # Set to None so you can add a named tile layer manually
+    )
 
+    # Add tile layer with a custom name
+    folium.TileLayer(
+        tiles="Cartodb Positron",
+        name="Mapa base"
+    ).add_to(map_obj)
+
+    # ----------- Cluster Feature Group -------------
+    cluster_group = folium.FeatureGroup(name="📍 Imágenes Geolocalizadas")
+    marker_cluster = MarkerCluster(icon_create_function=icon_create_function).add_to(cluster_group)
+
+    # Añadir marcadores al grupo de clusters
     for img_name, coords, img_obj in image_data_list:
         if coords:
-            # Convertir imagen a base64 para incrustarla en el popup
             buffered = io.BytesIO()
-            img_obj.copy().thumbnail((200, 200))  # Redimensionar para el popup
+            img_obj.copy().thumbnail((200, 200))
             img_obj.save(buffered, format="JPEG")
             img_str = base64.b64encode(buffered.getvalue()).decode()
-            
             html = f"""
             <h3>{img_name}</h3>
             <img src="data:image/jpeg;base64,{img_str}" width="200px">
             <p>Coordenadas: {coords[0]:.6f}, {coords[1]:.6f}</p>
             """
-            
             iframe = folium.IFrame(html=html, width=220, height=280)
             popup = folium.Popup(iframe, max_width=220)
+
             folium.Marker(
                 location=coords,
                 popup=popup,
                 tooltip=img_name,
                 icon=icon
             ).add_to(marker_cluster)
-    
+
+    # Añadir grupo de clusters al mapa
+    cluster_group.add_to(map_obj)
+
+    if include_heatmap:
+        heat_group = folium.FeatureGroup(name="🔥 Densidad (Heatmap)", show=False)
+        heat_points = [coords for _, coords, _ in image_data_list if coords]
+        HeatMap(
+            heat_points,
+            radius=15,
+            blur=10,
+            min_opacity=0.4
+        ).add_to(heat_group)
+        heat_group.add_to(map_obj)
+
+
+
+    # ----------- Controles y Leyenda -------------
+    map_obj.get_root().html.add_child(folium.Element(legend_html))
+    folium.LayerControl(collapsed=False).add_to(map_obj)
+
+    # Guardar mapa
     map_obj.save(output_file)
     print(f"Mapa HTML generado: {output_file}")
     return output_file
+
 
 def create_kml(image_data_list, output_file="images_map.kml"):
     """Genera un archivo KML con las imágenes geolocalizadas"""
