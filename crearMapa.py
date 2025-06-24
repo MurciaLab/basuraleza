@@ -134,80 +134,107 @@ function(cluster) {
 """
 
 legend_html = """
-<div id="cluster-legend" style="
+<style>
+/* Common styles for all legend boxes and layer control */
+#custom-legends,
+#cluster-legend,
+#heatmap-legend,
+.leaflet-control-layers {
+    width: 220px !important;
+}
+
+#custom-legends {
     position: fixed;
     top: 110px;
     right: 10px;
-    width: 180px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Box styling for individual legends */
+.legend-box {
+    display: none;
     background-color: white;
     border: 1px solid rgba(0,0,0,0.2);
-    z-index: 999;
     font-size: 14px;
     padding: 10px;
-    border-radius: 4px;
-    display: none;
+    border-radius: 8px;
     box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-">
+}
+</style>
+
+<div id="custom-legends"></div>
+
+<!-- Cluster Size Legend -->
+<div id="cluster-legend" class="legend-box">
 <b>Tamaño de grupo</b><br>
-<div style=\"background:#FFA500;width:20px;height:20px;display:inline-block;margin-right:5px;\"></div>Pequeño (1–9)<br>
-<div style=\"background:#FF7F50;width:20px;height:20px;display:inline-block;margin-right:5px;\"></div>Mediano (10–29)<br>
-<div style=\"background:#FF4500;width:20px;height:20px;display:inline-block;margin-right:5px;\"></div>Grande (30–59)<br>
-<div style=\"background:#B22222;width:20px;height:20px;display:inline-block;margin-right:5px;\"></div>Muy grande (60+)
+<div style='background:#FFA500;width:20px;height:20px;display:inline-block;margin-right:5px;'></div>Pequeño (1–9)<br>
+<div style='background:#FF7F50;width:20px;height:20px;display:inline-block;margin-right:5px;'></div>Mediano (10–29)<br>
+<div style='background:#FF4500;width:20px;height:20px;display:inline-block;margin-right:5px;'></div>Grande (30–59)<br>
+<div style='background:#B22222;width:20px;height:20px;display:inline-block;margin-right:5px;'></div>Muy grande (60+)
+</div>
+
+<!-- Heatmap Legend -->
+<div id="heatmap-legend" class="legend-box">
+<b>Densidad</b><br>
+<div style="
+    height: 15px;
+    margin: 6px 0;
+    background: linear-gradient(to right, blue, cyan, lime, yellow, orange, red);
+    border: 1px solid #aaa;
+"></div>
+<div style="display: flex; justify-content: space-between;">
+  <span>Baja</span><span>Alta</span>
+</div>
 </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const legend = document.getElementById("cluster-legend");
+    const clusterLegend = document.getElementById("cluster-legend");
+    const heatmapLegend = document.getElementById("heatmap-legend");
+    const legendsContainer = document.getElementById("custom-legends");
+
+    // Append legends to container only once
+    if (!legendsContainer.contains(clusterLegend)) {
+        legendsContainer.appendChild(clusterLegend);
+    }
+    if (!legendsContainer.contains(heatmapLegend)) {
+        legendsContainer.appendChild(heatmapLegend);
+    }
 
     let map = null;
-
     for (let key in window) {
         if (window[key] instanceof L.Map) {
             map = window[key];
             break;
         }
     }
-
     if (!map) return;
 
-    map.whenReady(function () {
-        // Check if the "📍 Imágenes Geolocalizadas" layer is active initially
-        let isActive = false;
-        map.eachLayer(function (layer) {
-            if (layer.getAttribution && layer.getAttribution() === "📍 Imágenes Geolocalizadas") {
-                isActive = true;
+    function updateLegendVisibility() {
+        const checkboxes = document.querySelectorAll(".leaflet-control-layers-overlays input[type='checkbox']");
+        clusterLegend.style.display = "none";
+        heatmapLegend.style.display = "none";
+
+        checkboxes.forEach(cb => {
+            const label = cb.closest("label");
+            if (!label || !cb.checked) return;
+
+            if (label.textContent.includes("Imágenes Geolocalizadas")) {
+                clusterLegend.style.display = "block";
+            }
+            if (label.textContent.includes("Heatmap")) {
+                heatmapLegend.style.display = "block";
             }
         });
+    }
 
-        // Fallback: inspect _layers in the layer control
-        if (map._controlContainer) {
-            const checkboxes = map._controlContainer.querySelectorAll("input[type='checkbox']");
-            checkboxes.forEach((checkbox) => {
-                const label = checkbox.closest("label");
-                if (label && label.textContent.includes("📍 Imágenes Geolocalizadas") && checkbox.checked) {
-                    legend.style.display = "block";
-                }
-            });
-        }
-
-        // Dynamic changes
-        map.on("overlayadd", function (e) {
-            if (e.name === "📍 Imágenes Geolocalizadas") {
-                legend.style.display = "block";
-            }
-        });
-
-        map.on("overlayremove", function (e) {
-            if (e.name === "📍 Imágenes Geolocalizadas") {
-                legend.style.display = "none";
-            }
-        });
-    });
+    map.on("overlayadd overlayremove", updateLegendVisibility);
+    setTimeout(updateLegendVisibility, 500);
 });
 </script>
-
-
-
 """
 
 
