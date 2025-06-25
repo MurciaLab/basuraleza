@@ -237,8 +237,6 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 """
 
-
-
 def create_folium_map(image_data_list, output_file="images_map.html", include_heatmap=False):
     """Crea un mapa interactivo con Folium con capas toggleables"""
 
@@ -250,7 +248,7 @@ def create_folium_map(image_data_list, output_file="images_map.html", include_he
     )
 
     # Filtrar coordenadas válidas
-    valid_coords = [coords for _, coords, _ in image_data_list if coords]
+    valid_coords = [img_data['coords'] for img_data in image_data_list if img_data.get('coords')]
     if not valid_coords:
         return None
 
@@ -275,33 +273,71 @@ def create_folium_map(image_data_list, output_file="images_map.html", include_he
     marker_cluster = MarkerCluster(icon_create_function=icon_create_function).add_to(cluster_group)
 
     # Añadir marcadores al grupo de clusters
-    for img_name, coords, img_obj in image_data_list:
-        if coords:
-            buffered = io.BytesIO()
-            img_obj.copy().thumbnail((200, 200))
-            img_obj.save(buffered, format="JPEG")
-            img_str = base64.b64encode(buffered.getvalue()).decode()
-            html = f"""
-            <h3>{img_name}</h3>
-            <img src="data:image/jpeg;base64,{img_str}" width="200px">
-            <p>Coordenadas: {coords[0]:.6f}, {coords[1]:.6f}</p>
-            """
-            iframe = folium.IFrame(html=html, width=220, height=280)
-            popup = folium.Popup(iframe, max_width=220)
+    for img_data in image_data_list:
+        coords = img_data.get('coords')
+        img_name = img_data.get('name')
+        file_id = img_data.get('id')
 
-            folium.Marker(
-                location=coords,
-                popup=popup,
-                tooltip=img_name,
-                icon=icon
-            ).add_to(marker_cluster)
+        if not coords or not file_id:
+            continue
+
+        image_url = f"https://drive.google.com/thumbnail?id={file_id}&sz=w1600"
+
+        # Maximum popup constraints (in pixels, roughly relative to screen size)
+        max_width = 800  # You may set to 90% of screen width on JS/CSS
+        max_height = 600  # Adjust to fit mobile and desktop
+
+        orig_width = img_data.get('width', 800)
+        orig_height = img_data.get('height', 600)
+
+        aspect_ratio = orig_width / orig_height
+
+        # Scale image to fit within popup bounds
+        if orig_width > max_width or orig_height > max_height:
+            if aspect_ratio >= 1:  # Wider image
+                display_width = min(orig_width, max_width)
+                display_height = display_width / aspect_ratio
+            else:  # Taller image
+                display_height = min(orig_height, max_height)
+                display_width = display_height * aspect_ratio
+        else:
+            display_width = orig_width
+            display_height = orig_height
+
+        iframe = folium.IFrame(
+            f"""
+            <style>
+                .popup-image {{
+                    display: block;
+                    margin: 0;
+                    padding: 0;
+                    border-radius: 8px;
+                    max-width: 100%;
+                    height: auto;
+                }}
+            </style>
+            <img src="{image_url}" class="popup-image" width="{int(display_width)}" height="{int(display_height)}" loading="lazy">
+            """,
+            width=int(display_width),
+            height=int(display_height)
+        )
+
+        popup = folium.Popup(iframe, max_width=800)
+
+        folium.Marker(
+            location=coords,
+            popup=popup,
+            tooltip=img_name,
+            icon=icon
+        ).add_to(marker_cluster)
 
     # Añadir grupo de clusters al mapa
     cluster_group.add_to(map_obj)
 
+    # ----------- Heatmap Feature Group -------------
     if include_heatmap:
         heat_group = folium.FeatureGroup(name="🔥 Densidad (Heatmap)", show=False)
-        heat_points = [coords for _, coords, _ in image_data_list if coords]
+        heat_points = [img_data['coords'] for img_data in image_data_list if img_data.get('coords')]
         HeatMap(
             heat_points,
             radius=15,
@@ -309,8 +345,6 @@ def create_folium_map(image_data_list, output_file="images_map.html", include_he
             min_opacity=0.4
         ).add_to(heat_group)
         heat_group.add_to(map_obj)
-
-
 
     # ----------- Controles y Leyenda -------------
     map_obj.get_root().html.add_child(folium.Element(legend_html))
@@ -405,6 +439,32 @@ def is_image_file(filename):
     image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.tiff', '.bmp']
     return any(filename.lower().endswith(ext) for ext in image_extensions)
 
+def get_images_from_drive_public(file_id_list):
+    """Carga imágenes desde Google Drive usando IDs públicos (sin API ni autenticación)"""
+    images = []
+
+    for file_id in file_id_list:
+        try:
+            url = f"https://drive.google.com/uc?export=download&id={file_id}"
+            response = requests.get(url, stream=True)
+            if response.status_code == 200:
+                img_bytes = io.BytesIO(response.content)
+                image = Image.open(img_bytes)
+                images.append({
+                    'name': f"{file_id}.jpg",
+                    'image': image,
+                    'id': file_id
+                })
+                print(f"Imagen cargada desde URL pública: {file_id}")
+            else:
+                print(f"Error al descargar imagen con ID {file_id}: HTTP {response.status_code}")
+        except Exception as e:
+            print(f"Error al procesar imagen {file_id}: {e}")
+
+    print(f"Se cargaron {len(images)} imágenes desde enlaces públicos.")
+    return images, None
+
+
 def get_images_from_drive(folder_id):
     """Obtiene imágenes desde una carpeta de Google Drive"""
     if not DRIVE_AVAILABLE:
@@ -460,7 +520,8 @@ def get_images_from_drive(folder_id):
                     images.append({
                         'name': file_name,
                         'image': image,
-                        'path': file_path
+                        'path': file_path,
+                        'id': file_id
                     })
                     print(f"Imagen cargada desde Drive: {file_name}")
                 except Exception as e:
@@ -542,6 +603,9 @@ def main():
         image_data_list = []
         for img_data in image_list:
             image = img_data['image']
+            width, height = image.size
+            img_data['width'] = width
+            img_data['height'] = height
             name = img_data['name']
             
             exif_data = get_exif_data(image)
@@ -550,7 +614,8 @@ def main():
             
             if coords:
                 print(f"Coordenadas de {name}: {coords}")
-                image_data_list.append((name, coords, image))
+                img_data['coords'] = coords
+                image_data_list.append(img_data)
             else:
                 print(f"No se encontraron coordenadas GPS en {name}")
         
