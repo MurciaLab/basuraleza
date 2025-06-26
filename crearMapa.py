@@ -135,17 +135,16 @@ function(cluster) {
 
 legend_html = """
 <style>
-/* Common styles for all legend boxes and layer control */
-#custom-legends,
-#cluster-legend,
-#heatmap-legend,
-.leaflet-control-layers {
-    width: 220px !important;
+/* Shared layout and styling */
+#custom-legends, #cluster-legend, #heatmap-legend, .leaflet-control-layers {
+    width: 240px !important;
+    font-size: 16px;
 }
 
+/* Stack everything in a vertical column */
 #custom-legends {
     position: fixed;
-    top: 110px;
+    top: 10px;
     right: 10px;
     z-index: 1000;
     display: flex;
@@ -153,21 +152,24 @@ legend_html = """
     gap: 10px;
 }
 
-/* Box styling for individual legends */
-.legend-box {
-    display: none;
+/* Match style for all boxes */
+.legend-box, .leaflet-control-layers {
     background-color: white;
     border: 1px solid rgba(0,0,0,0.2);
-    font-size: 14px;
     padding: 10px;
     border-radius: 8px;
     box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+}
+
+/* Cluster visibility */
+.marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
+    opacity: 1;
+    transition: opacity 0.5s;
 }
 </style>
 
 <div id="custom-legends"></div>
 
-<!-- Cluster Size Legend -->
 <div id="cluster-legend" class="legend-box">
 <b>Tamaño de grupo</b><br>
 <div style='background:#FFA500;width:20px;height:20px;display:inline-block;margin-right:5px;'></div>Pequeño (1–9)<br>
@@ -176,18 +178,10 @@ legend_html = """
 <div style='background:#B22222;width:20px;height:20px;display:inline-block;margin-right:5px;'></div>Muy grande (60+)
 </div>
 
-<!-- Heatmap Legend -->
 <div id="heatmap-legend" class="legend-box">
 <b>Densidad</b><br>
-<div style="
-    height: 15px;
-    margin: 6px 0;
-    background: linear-gradient(to right, blue, cyan, lime, yellow, orange, red);
-    border: 1px solid #aaa;
-"></div>
-<div style="display: flex; justify-content: space-between;">
-  <span>Baja</span><span>Alta</span>
-</div>
+<div style="height: 15px; margin: 6px 0; background: linear-gradient(to right, blue, cyan, lime, yellow, orange, red); border: 1px solid #aaa;"></div>
+<div style="display: flex; justify-content: space-between;"><span>Baja</span><span>Alta</span></div>
 </div>
 
 <script>
@@ -196,13 +190,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const heatmapLegend = document.getElementById("heatmap-legend");
     const legendsContainer = document.getElementById("custom-legends");
 
-    // Append legends to container only once
-    if (!legendsContainer.contains(clusterLegend)) {
-        legendsContainer.appendChild(clusterLegend);
+    const leafletLayers = document.querySelector('.leaflet-control-layers');
+    if (leafletLayers && legendsContainer) {
+        legendsContainer.appendChild(leafletLayers);
     }
-    if (!legendsContainer.contains(heatmapLegend)) {
-        legendsContainer.appendChild(heatmapLegend);
-    }
+
+    legendsContainer.appendChild(clusterLegend);
+    legendsContainer.appendChild(heatmapLegend);
 
     let map = null;
     for (let key in window) {
@@ -217,24 +211,32 @@ document.addEventListener("DOMContentLoaded", function () {
         const checkboxes = document.querySelectorAll(".leaflet-control-layers-overlays input[type='checkbox']");
         clusterLegend.style.display = "none";
         heatmapLegend.style.display = "none";
+        let heatmapEnabled = false;
 
         checkboxes.forEach(cb => {
             const label = cb.closest("label");
             if (!label || !cb.checked) return;
-
-            if (label.textContent.includes("Imágenes Geolocalizadas")) {
+            if (label.textContent.includes("Fotos Geolocalizadas")) {
                 clusterLegend.style.display = "block";
             }
-            if (label.textContent.includes("Heatmap")) {
+            if (label.textContent.includes("Densidad")) {
                 heatmapLegend.style.display = "block";
+                heatmapEnabled = true;
             }
+        });
+
+        // Re-apply opacity to dynamically updated cluster elements
+        const clusterElements = document.querySelectorAll(".marker-cluster");
+        clusterElements.forEach(el => {
+            el.style.opacity = heatmapEnabled ? 0.5 : 1;
         });
     }
 
-    map.on("overlayadd overlayremove", updateLegendVisibility);
+    map.on("overlayadd overlayremove zoomend moveend", updateLegendVisibility);
     setTimeout(updateLegendVisibility, 500);
 });
 </script>
+
 """
 
 def create_folium_map(image_data_list, output_file="images_map.html", include_heatmap=False):
@@ -258,7 +260,7 @@ def create_folium_map(image_data_list, output_file="images_map.html", include_he
     # Crear mapa base
     map_obj = folium.Map(
         location=[avg_lat, avg_lon],
-        zoom_start=10,
+        zoom_start=12,
         tiles=None  # Set to None so you can add a named tile layer manually
     )
 
@@ -269,7 +271,7 @@ def create_folium_map(image_data_list, output_file="images_map.html", include_he
     ).add_to(map_obj)
 
     # ----------- Cluster Feature Group -------------
-    cluster_group = folium.FeatureGroup(name="📍 Imágenes Geolocalizadas")
+    cluster_group = folium.FeatureGroup(name="📍 Fotos Geolocalizadas")
     marker_cluster = MarkerCluster(icon_create_function=icon_create_function).add_to(cluster_group)
 
     # Añadir marcadores al grupo de clusters
@@ -327,7 +329,7 @@ def create_folium_map(image_data_list, output_file="images_map.html", include_he
         folium.Marker(
             location=coords,
             popup=popup,
-            tooltip=img_name,
+            #tooltip=img_name,
             icon=icon
         ).add_to(marker_cluster)
 
@@ -336,7 +338,7 @@ def create_folium_map(image_data_list, output_file="images_map.html", include_he
 
     # ----------- Heatmap Feature Group -------------
     if include_heatmap:
-        heat_group = folium.FeatureGroup(name="🔥 Densidad (Heatmap)", show=False)
+        heat_group = folium.FeatureGroup(name="🔥 Densidad", show=False)
         heat_points = [img_data['coords'] for img_data in image_data_list if img_data.get('coords')]
         HeatMap(
             heat_points,
@@ -466,55 +468,72 @@ def get_images_from_drive_public(file_id_list):
 
 
 def get_images_from_drive(folder_id):
-    """Obtiene imágenes desde una carpeta de Google Drive"""
+    """Obtiene imágenes desde una carpeta de Google Drive (con paginación)"""
     if not DRIVE_AVAILABLE:
         print("Error: No se pueden cargar las bibliotecas de Google Drive.")
         print("Por favor instala los paquetes necesarios con:")
         print("pip install google-api-python-client google-auth-oauthlib google-auth")
         return [], None
-        
+
     print(f"Obteniendo imágenes de Google Drive (Carpeta ID: {folder_id})...")
     images = []
-    
+
     try:
         # Obtener servicio de Drive
         service = get_drive_service()
-        
-        # Consultar archivos en la carpeta
+
+        # Consulta para obtener archivos en la carpeta especificada
         query = f"'{folder_id}' in parents and trashed=false"
-        results = service.files().list(
-            q=query,
-            fields="files(id, name, mimeType)"
-        ).execute()
-        
-        items = results.get('files', [])
-        
+
+        # Lista de archivos con paginación
+        items = []
+        page_token = None
+
+        while True:
+            response = service.files().list(
+                q=query,
+                fields="nextPageToken, files(id, name, mimeType)",
+                pageSize=2,  # Máximo permitido
+                pageToken=page_token
+            ).execute()
+
+            items.extend(response.get('files', []))
+            page_token = response.get('nextPageToken', None)
+            if not page_token:
+                break
+
         if not items:
             print("No se encontraron archivos en la carpeta especificada.")
             return images, None
-        
+
         # Crear directorio temporal para descargar imágenes
         temp_dir = tempfile.mkdtemp()
         print(f"Descargando imágenes a directorio temporal: {temp_dir}")
-        
-        # Filtrar solo imágenes y descargarlas
+
+        # Filtrar y descargar solo archivos de imagen
+
+        #counter = 0
+
         for item in items:
+            #if counter >= 2:
+            #    break
+            #counter += 1
             file_name = item['name']
             file_id = item['id']
-            
+
             if is_image_file(file_name):
                 try:
                     # Descargar archivo
                     request = service.files().get_media(fileId=file_id)
                     file_path = os.path.join(temp_dir, file_name)
-                    
+
                     with open(file_path, 'wb') as f:
                         downloader = MediaIoBaseDownload(f, request)
                         done = False
                         while not done:
                             status, done = downloader.next_chunk()
                             print(f"Descargando {file_name}: {int(status.progress() * 100)}%")
-                    
+
                     # Abrir imagen con PIL
                     image = Image.open(file_path)
                     images.append({
@@ -524,14 +543,13 @@ def get_images_from_drive(folder_id):
                         'id': file_id
                     })
                     print(f"Imagen cargada desde Drive: {file_name}")
+
                 except Exception as e:
                     print(f"Error al descargar o procesar {file_name}: {e}")
-        
+
         print(f"Se cargaron {len(images)} imágenes desde Google Drive.")
-        
-        # Registrar el directorio temporal para limpieza al finalizar
         return images, temp_dir
-        
+
     except Exception as e:
         print(f"Error al acceder a Google Drive: {e}")
         return images, None
