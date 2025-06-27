@@ -244,24 +244,23 @@ document.addEventListener("DOMContentLoaded", function () {
 """
 
 def create_folium_map(image_data_list, output_file="images_map.html", include_heatmap=False):
-    """Crea un mapa interactivo con Folium usando un lightbox fullscreen para las imágenes."""
-
-    # --- 0) prepara icono custom ---
+    """Crea un mapa interactivo con Folium usando un lightbox fullscreen y aplica transparencia a los marker-clusters cuando la capa de densidad está activa."""
+    # 0) Preparar icono custom
     icon = CustomIcon(
         icon_image='waste-icon.png',
         icon_size=(40, 40),
         icon_anchor=(15, 15)
     )
 
-    # --- 1) filtrar datos válidos ---
+    # 1) Filtrar datos válidos
     valid = [img for img in image_data_list if img.get('coords') and img.get('id')]
     if not valid:
         return None
 
-    avg_lat = sum(lat for lat,_ in (img['coords'] for img in valid)) / len(valid)
-    avg_lon = sum(lon for _,lon in (img['coords'] for img in valid)) / len(valid)
+    avg_lat = sum(lat for lat, _ in (img['coords'] for img in valid)) / len(valid)
+    avg_lon = sum(lon for _, lon in (img['coords'] for img in valid)) / len(valid)
 
-    # --- 2) crear mapa ---
+    # 2) Crear mapa base
     m = Map(
         location=[avg_lat, avg_lon],
         zoom_start=12,
@@ -270,202 +269,130 @@ def create_folium_map(image_data_list, output_file="images_map.html", include_he
     )
     TileLayer("Cartodb Positron", name="Mapa base").add_to(m)
 
+    # 3) CSS para full-screen y sin scroll
     layout_css = """
     <style>
-    /* 1) Sin scroll en toda la página */
-    html, body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-    }
-
-    /* 2) Los wrappers automáticos de Folium no ocupan 100% de altura */
-    div[id^="html_"] {
-        width: auto !important;
-        height: auto !important;
-        position: static !important;
-    }
-
-    /* 3) El mapa y el contenedor Leaflet ocupan siempre todo el viewport */
-    .folium-map, .leaflet-container {
-        position: absolute !important;
-        top: 0 !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-    }
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+      div[id^=\"html_\"] { width: auto !important; height: auto !important; position: static !important; }
+      .folium-map, .leaflet-container { position: absolute !important; top: 0 !important; bottom: 0 !important; left: 0 !important; right: 0 !important; }
     </style>
     """
     m.get_root().html.add_child(Html(layout_css, script=True))
 
-    # --- 3) inyectar el modal/lightbox ---
+    # 4) Lightbox fullscreen
     lightbox = """
     <style>
-    .img-modal { display:none; position:fixed; z-index:10000;
-                left:0; top:0; width:100vw; height:100vh;
-                background:rgba(0,0,0,0.8);
-                align-items:center; justify-content:center; }
-    .img-modal__content {
-        max-width:90vw; max-height:90vh;
-        box-shadow:0 0 20px rgba(0,0,0,0.5);
-        border-radius:4px; object-fit:contain;
-    }
-    .img-modal__close {
-        position:absolute; top:1rem; right:1rem;
-        font-size:2rem; color:#fff; cursor:pointer;
-    }
+      .img-modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100vw; height: 100vh;
+                   background: rgba(0,0,0,0.8); align-items: center; justify-content: center; }
+      .img-modal__content { max-width: 90vw; max-height: 90vh; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+                            border-radius: 4px; object-fit: contain; }
+      .img-modal__close { position: absolute; top: 1rem; right: 1rem; font-size: 2rem; color: #fff; cursor: pointer; }
     </style>
     <div id="imgModal" class="img-modal">
-    <span id="imgModalClose" class="img-modal__close">&times;</span>
-    <img id="imgModalContent" class="img-modal__content" src="" alt="Foto"/>
+      <span id="imgModalClose" class="img-modal__close">&times;</span>
+      <img id="imgModalContent" class="img-modal__content" src="" alt="Foto" />
     </div>
     <script>
-    const modal      = document.getElementById("imgModal");
-    const modalImg   = document.getElementById("imgModalContent");
-    const modalClose = document.getElementById("imgModalClose");
-
-    // ← NUEVA VERSIÓN: esperamos a que la imagen cargue antes de mostrar el modal
-    function showImageLightbox(url) {
+      const modal = document.getElementById("imgModal");
+      const modalImg = document.getElementById("imgModalContent");
+      const modalClose = document.getElementById("imgModalClose");
+      function showImageLightbox(url) {
         const tmp = new Image();
-        tmp.onload = () => {
-        modalImg.src = url;
-        modal.style.display = "flex";
-        };
+        tmp.onload = () => { modalImg.src = url; modal.style.display = "flex"; };
         tmp.src = url;
-    }
-
-    modalClose.onclick = () => modal.style.display = "none";
-    modal.onclick = e => { if(e.target===modal) modal.style.display="none"; };
-    document.addEventListener("keydown", e => { if(e.key==="Escape") modal.style.display="none"; });
+      }
+      modalClose.onclick = () => modal.style.display = "none";
+      modal.onclick = e => { if (e.target === modal) modal.style.display = "none"; };
+      document.addEventListener("keydown", e => { if (e.key === "Escape") modal.style.display = "none"; });
     </script>
     """
     m.get_root().html.add_child(Html(lightbox, script=True))
 
-    # --- 4) capas de fotos con clustering (con icon_create_function corregido) ---
+    # 5) Fotos con clustering
     fg_photos = FeatureGroup(name="📍 Fotos Geolocalizadas")
     mc = MarkerCluster(icon_create_function=icon_create_function).add_to(fg_photos)
-
     bindings = []
     for img in valid:
         lat, lon = img['coords']
-        fid     = img['id']
-        url     = f"https://drive.google.com/thumbnail?id={fid}&sz=w1600"
-
+        fid = img['id']
+        url = f"https://drive.google.com/thumbnail?id={fid}&sz=w1600"
         mk = Marker(location=[lat, lon], icon=icon).add_to(mc)
         bindings.append((mk.get_name(), url))
-
     fg_photos.add_to(m)
 
-    # --- 5) capa heatmap opcional ---
+    # 6) Capa heatmap opcional
     if include_heatmap:
         fg_heat = FeatureGroup(name="🔥 Densidad", show=False)
-        HeatMap(
-            [img['coords'] for img in valid],
-            radius=15, blur=10, min_opacity=0.4
-        ).add_to(fg_heat)
+        HeatMap([img['coords'] for img in valid], radius=15, blur=10, min_opacity=0.4).add_to(fg_heat)
         fg_heat.add_to(m)
 
-    # --- 6) legend + layer-control en un container flex ---
+    # 7) Prepara líneas de binding para clicks
+    binding_lines = "\n".join(
+        f"{nm}.off('click').on('click', function(){{ showImageLightbox('{url}'); }});"
+        for nm, url in bindings
+    )
+
+    # 8) Leyenda y control de capas en contenedor
     legend = f"""
     <style>
-      /* convertimos todo en una columna */
-      #custom-legends {{
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        z-index: 1000;
-        background: white;
-        padding: 10px;
-        border-radius: 8px;
-        box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-      }}
-      /* al mover .leaflet-control-layers aquí, lo hacemos estático */
-      #custom-legends .leaflet-control-layers {{
-        position: static !important;
-        margin-bottom: 10px;
-        width: auto !important;
-        box-shadow: none !important;
-      }}
-      .legend-box {{
-        margin-bottom: 10px;
-      }}
+      #custom-legends {{ display: flex; flex-direction: column; gap: 10px;
+                         position: fixed; top: 10px; right: 10px; z-index: 1000;
+                         background: white; padding: 10px; border-radius: 8px;
+                         box-shadow: 0 1px 5px rgba(0,0,0,0.4); }}
+      #custom-legends .leaflet-control-layers {{ position: static !important;
+                                               margin-bottom: 10px; width: auto !important;
+                                               box-shadow: none !important; }}
+      .legend-box {{ margin-bottom: 10px; }}
+      .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {{ transition: opacity 0.5s; opacity: 1; }}
     </style>
     <div id="custom-legends">
-      <div class="legend-box">
+      <div class="legend-box" id="cluster-legend">
         <b>Tamaño de grupo</b><br>
         <span style="background:#FFA500;width:12px;height:12px;display:inline-block"></span> 1–9<br>
         <span style="background:#FF7F50;width:12px;height:12px;display:inline-block"></span> 10–29<br>
         <span style="background:#FF4500;width:12px;height:12px;display:inline-block"></span> 30–59<br>
         <span style="background:#B22222;width:12px;height:12px;display:inline-block"></span> 60+<br>
       </div>
-      <div class="legend-box">
+      <div class="legend-box" id="heatmap-legend">
         <b>Densidad</b><br>
         <div style="height:12px;background:linear-gradient(to right,blue,cyan,lime,yellow,orange,red)"></div>
-        <div style="display:flex;justify-content:space-between">
-          <small>Baja</small><small>Alta</small>
-        </div>
+        <div style="display:flex;justify-content:space-between"><small>Baja</small><small>Alta</small></div>
       </div>
     </div>
     <script>
       document.addEventListener("DOMContentLoaded", function() {{
-        var ctl = document.querySelector(".leaflet-control-layers");
-        if(ctl) document.getElementById("custom-legends").prepend(ctl);
+        var container = document.getElementById("custom-legends");
+        var lc = document.querySelector(".leaflet-control-layers");
+        if (lc) container.prepend(lc);
+
+        (function waitForMap() {{
+          var m = Object.values(window).find(v => v instanceof L.Map);
+          if (!m) return setTimeout(waitForMap, 50);
+          function update() {{
+            var fotosOn = false, densOn = false;
+            document.querySelectorAll(".leaflet-control-layers-overlays input[type='checkbox']").forEach(cb => {{
+              var lbl = cb.closest("label").textContent;
+              if (cb.checked && /Fotos Geolocalizadas/.test(lbl)) fotosOn = true;
+              if (cb.checked && /Densidad/.test(lbl)) densOn = true;
+            }});
+            document.getElementById("cluster-legend").style.display = fotosOn ? "block" : "none";
+            document.getElementById("heatmap-legend").style.display = densOn ? "block" : "none";
+            document.querySelectorAll(".marker-cluster").forEach(el => el.style.opacity = densOn ? 0.5 : 1);
+          }}
+          m.on("overlayadd overlayremove zoomend moveend", update);
+          update();
+          // Ejecutar binding de clicks
+          {binding_lines}
+        }})();
       }});
     </script>
     """
     m.get_root().html.add_child(Html(legend, script=True))
 
-    # --- 7) bind de los marcadores, esperando a que map_xxx exista ---
-    map_var = m.get_name()   # e.g. "map_abcd1234..."
-    bind_lines = "\n".join(
-        f"{nm}.on('click', function() {{ showImageLightbox('{u}'); }});"
-        for nm,u in bindings
-    )
-    bind_js = f"""
-    <script>
-    (function waitForMap() {{
-      if (typeof {map_var} === 'undefined') {{
-        setTimeout(waitForMap, 50);
-      }} else {{
-        {map_var}.whenReady(function() {{
-          {bind_lines}
-        }});
-      }}
-    }})();
-    </script>
-    """
-    m.get_root().html.add_child(Html(bind_js, script=True))
-
-    # --- 8) finalmente añadimos el control de capas y guardamos ---
+    # 9) Control de capas final y guardado
     LayerControl(collapsed=False).add_to(m)
-
     m.save(output_file)
     print(f"Mapa HTML generado: {output_file}")
-    return output_file
-
-def create_gpx(image_data_list, output_file="images_map.gpx"):
-    """Genera un archivo GPX con las imágenes geolocalizadas"""
-    gpx = gpxpy.gpx.GPX()
-    
-    for img_name, coords, _ in image_data_list:
-        if coords:
-            # Crear waypoint en GPX
-            waypoint = gpxpy.gpx.GPXWaypoint(
-                latitude=coords[0],
-                longitude=coords[1],
-                name=img_name
-            )
-            gpx.waypoints.append(waypoint)
-    
-    with open(output_file, 'w') as f:
-        f.write(gpx.to_xml())
-    
-    print(f"Archivo GPX generado: {output_file}")
     return output_file
 
 def get_drive_service():
