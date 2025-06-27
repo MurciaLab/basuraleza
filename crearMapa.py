@@ -332,19 +332,31 @@ def create_folium_map(image_data_list, output_file="images_map.html", include_he
         for nm, url in bindings
     )
 
-    # 8) Leyenda y control de capas en contenedor
+    # 8) Leyenda y control de capas en contenedor con botón toggle en móvil
     legend = f"""
     <style>
-      #custom-legends {{ display: flex; flex-direction: column; gap: 10px;
-                         position: fixed; top: 10px; right: 10px; z-index: 1000;
-                         background: white; padding: 10px; border-radius: 8px;
-                         box-shadow: 0 1px 5px rgba(0,0,0,0.4); }}
+      #legend-toggle {{ display: none; position: fixed; top: 10px; right: 10px; z-index:1001;
+                      width:32px; height:32px; background:#fff; border-radius:4px;
+                      box-shadow:0 1px 5px rgba(0,0,0,0.4); align-items:center;
+                      justify-content:center; cursor:pointer; font-size:20px; }}
+      #custom-legends {{ display: flex; flex-direction: column; gap:10px;
+                         position: fixed; top:10px; right:10px; z-index:1000;
+                         background:white; padding:10px; border-radius:8px;
+                         box-shadow:0 1px 5px rgba(0,0,0,0.4);
+                         transition: transform 0.3s ease-in-out; }}
+      #custom-legends.collapsed {{ transform: translateX(110%); }}
+      @media(max-width:600px) {{
+        #legend-toggle {{ display:flex; }}
+        #custom-legends {{ transform: translateX(110%); }}
+        #custom-legends.show {{ transform: translateX(0); }}
+      }}
       #custom-legends .leaflet-control-layers {{ position: static !important;
-                                               margin-bottom: 10px; width: auto !important;
-                                               box-shadow: none !important; }}
-      .legend-box {{ margin-bottom: 10px; }}
-      .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {{ transition: opacity 0.5s; opacity: 1; }}
+                                               margin-bottom:10px; width:auto !important;
+                                               box-shadow:none !important; }}
+      .legend-box {{ margin-bottom:10px; }}
+      .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {{ transition: opacity 0.5s; opacity:1; }}
     </style>
+    <div id="legend-toggle">☰</div>
     <div id="custom-legends">
       <div class="legend-box" id="cluster-legend">
         <b>Tamaño de grupo</b><br>
@@ -362,6 +374,8 @@ def create_folium_map(image_data_list, output_file="images_map.html", include_he
     <script>
       document.addEventListener("DOMContentLoaded", function() {{
         var container = document.getElementById("custom-legends");
+        var btn = document.getElementById("legend-toggle");
+        btn.onclick = () => container.classList.toggle("show");
         var lc = document.querySelector(".leaflet-control-layers");
         if (lc) container.prepend(lc);
 
@@ -381,7 +395,6 @@ def create_folium_map(image_data_list, output_file="images_map.html", include_he
           }}
           m.on("overlayadd overlayremove zoomend moveend", update);
           update();
-          // Ejecutar binding de clicks
           {binding_lines}
         }})();
       }});
