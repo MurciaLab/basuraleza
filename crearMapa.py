@@ -13,6 +13,10 @@ import argparse
 import sys
 import tempfile
 import shutil
+from branca.element import Html
+from folium import Map, TileLayer, FeatureGroup, Marker, LayerControl, CustomIcon, Html
+from branca.element import Element
+from folium.plugins import MarkerCluster, HeatMap
 
 # Importaciones para Google Drive - Condicionales
 DRIVE_AVAILABLE = False
@@ -240,143 +244,170 @@ document.addEventListener("DOMContentLoaded", function () {
 """
 
 def create_folium_map(image_data_list, output_file="images_map.html", include_heatmap=False):
-    """Crea un mapa interactivo con Folium con capas toggleables"""
+    """Crea un mapa interactivo con Folium usando un lightbox fullscreen para las imágenes."""
 
-    # Crear icono personalizado
-    icon = folium.CustomIcon(
+    # --- 0) prepara icono custom ---
+    icon = CustomIcon(
         icon_image='waste-icon.png',
         icon_size=(40, 40),
         icon_anchor=(15, 15)
     )
 
-    # Filtrar coordenadas válidas
-    valid_coords = [img_data['coords'] for img_data in image_data_list if img_data.get('coords')]
-    if not valid_coords:
+    # --- 1) filtrar datos válidos ---
+    valid = [img for img in image_data_list if img.get('coords') and img.get('id')]
+    if not valid:
         return None
 
-    avg_lat = sum(lat for lat, _ in valid_coords) / len(valid_coords)
-    avg_lon = sum(lon for _, lon in valid_coords) / len(valid_coords)
+    avg_lat = sum(lat for lat,_ in (img['coords'] for img in valid)) / len(valid)
+    avg_lon = sum(lon for _,lon in (img['coords'] for img in valid)) / len(valid)
 
-    # Crear mapa base
-    map_obj = folium.Map(
+    # --- 2) crear mapa ---
+    m = Map(
         location=[avg_lat, avg_lon],
         zoom_start=12,
-        tiles=None  # Set to None so you can add a named tile layer manually
+        tiles=None,
+        prefer_canvas=False
     )
+    TileLayer("Cartodb Positron", name="Mapa base").add_to(m)
 
-    # Add tile layer with a custom name
-    folium.TileLayer(
-        tiles="Cartodb Positron",
-        name="Mapa base"
-    ).add_to(map_obj)
+    # --- 3) inyectar el modal/lightbox ---
+    lightbox = """
+    <style>
+      .img-modal { display:none; position:fixed; z-index:10000;
+                   left:0; top:0; width:100vw; height:100vh;
+                   background:rgba(0,0,0,0.8);
+                   align-items:center; justify-content:center; }
+      .img-modal__content {
+        max-width:90vw; max-height:90vh; box-shadow:0 0 20px rgba(0,0,0,0.5);
+        border-radius:4px; object-fit:contain;
+      }
+      .img-modal__close {
+        position:absolute; top:1rem; right:1rem;
+        font-size:2rem; color:#fff; cursor:pointer;
+      }
+    </style>
+    <div id="imgModal" class="img-modal">
+      <span id="imgModalClose" class="img-modal__close">&times;</span>
+      <img id="imgModalContent" class="img-modal__content" src="" alt="Foto"/>
+    </div>
+    <script>
+      const modal = document.getElementById("imgModal");
+      const modalImg = document.getElementById("imgModalContent");
+      const modalClose = document.getElementById("imgModalClose");
+      function showImageLightbox(url) {
+        modalImg.src = url;
+        modal.style.display = "flex";
+      }
+      modalClose.onclick = () => modal.style.display = "none";
+      modal.onclick = e => { if(e.target===modal) modal.style.display="none"; };
+      document.addEventListener("keydown", e => { if(e.key==="Escape") modal.style.display="none"; });
+    </script>
+    """
+    m.get_root().html.add_child(Html(lightbox, script=True))
 
-    # ----------- Cluster Feature Group -------------
-    cluster_group = folium.FeatureGroup(name="📍 Fotos Geolocalizadas")
-    marker_cluster = MarkerCluster(icon_create_function=icon_create_function).add_to(cluster_group)
+    # --- 4) capas de fotos con clustering (con icon_create_function corregido) ---
+    fg_photos = FeatureGroup(name="📍 Fotos Geolocalizadas")
+    mc = MarkerCluster(icon_create_function=icon_create_function).add_to(fg_photos)
 
-    # Añadir marcadores al grupo de clusters
-    for img_data in image_data_list:
-        coords = img_data.get('coords')
-        img_name = img_data.get('name')
-        file_id = img_data.get('id')
+    bindings = []
+    for img in valid:
+        lat, lon = img['coords']
+        fid     = img['id']
+        url     = f"https://drive.google.com/thumbnail?id={fid}&sz=w1600"
 
-        if not coords or not file_id:
-            continue
+        mk = Marker(location=[lat, lon], icon=icon).add_to(mc)
+        bindings.append((mk.get_name(), url))
 
-        image_url = f"https://drive.google.com/thumbnail?id={file_id}&sz=w1600"
+    fg_photos.add_to(m)
 
-        # Maximum popup constraints (in pixels, roughly relative to screen size)
-        max_width = 800  # You may set to 90% of screen width on JS/CSS
-        max_height = 600  # Adjust to fit mobile and desktop
-
-        orig_width = img_data.get('width', 800)
-        orig_height = img_data.get('height', 600)
-
-        aspect_ratio = orig_width / orig_height
-
-        # Scale image to fit within popup bounds
-        if orig_width > max_width or orig_height > max_height:
-            if aspect_ratio >= 1:  # Wider image
-                display_width = min(orig_width, max_width)
-                display_height = display_width / aspect_ratio
-            else:  # Taller image
-                display_height = min(orig_height, max_height)
-                display_width = display_height * aspect_ratio
-        else:
-            display_width = orig_width
-            display_height = orig_height
-
-        iframe = folium.IFrame(
-            f"""
-            <style>
-                .popup-image {{
-                    display: block;
-                    margin: 0;
-                    padding: 0;
-                    border-radius: 8px;
-                    max-width: 100%;
-                    height: auto;
-                }}
-            </style>
-            <img src="{image_url}" class="popup-image" width="{int(display_width)}" height="{int(display_height)}" loading="lazy">
-            """,
-            width=int(display_width),
-            height=int(display_height)
-        )
-
-        popup = folium.Popup(iframe, max_width=800)
-
-        folium.Marker(
-            location=coords,
-            popup=popup,
-            #tooltip=img_name,
-            icon=icon
-        ).add_to(marker_cluster)
-
-    # Añadir grupo de clusters al mapa
-    cluster_group.add_to(map_obj)
-
-    # ----------- Heatmap Feature Group -------------
+    # --- 5) capa heatmap opcional ---
     if include_heatmap:
-        heat_group = folium.FeatureGroup(name="🔥 Densidad", show=False)
-        heat_points = [img_data['coords'] for img_data in image_data_list if img_data.get('coords')]
+        fg_heat = FeatureGroup(name="🔥 Densidad", show=False)
         HeatMap(
-            heat_points,
-            radius=15,
-            blur=10,
-            min_opacity=0.4
-        ).add_to(heat_group)
-        heat_group.add_to(map_obj)
+            [img['coords'] for img in valid],
+            radius=15, blur=10, min_opacity=0.4
+        ).add_to(fg_heat)
+        fg_heat.add_to(m)
 
-    # ----------- Controles y Leyenda -------------
-    map_obj.get_root().html.add_child(folium.Element(legend_html))
-    folium.LayerControl(collapsed=False).add_to(map_obj)
+    # --- 6) legend + layer-control en un container flex ---
+    legend = f"""
+    <style>
+      /* convertimos todo en una columna */
+      #custom-legends {{
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+      }}
+      /* al mover .leaflet-control-layers aquí, lo hacemos estático */
+      #custom-legends .leaflet-control-layers {{
+        position: static !important;
+        margin-bottom: 10px;
+        width: auto !important;
+        box-shadow: none !important;
+      }}
+      .legend-box {{
+        margin-bottom: 10px;
+      }}
+    </style>
+    <div id="custom-legends">
+      <div class="legend-box">
+        <b>Tamaño de grupo</b><br>
+        <span style="background:#FFA500;width:12px;height:12px;display:inline-block"></span> 1–9<br>
+        <span style="background:#FF7F50;width:12px;height:12px;display:inline-block"></span> 10–29<br>
+        <span style="background:#FF4500;width:12px;height:12px;display:inline-block"></span> 30–59<br>
+        <span style="background:#B22222;width:12px;height:12px;display:inline-block"></span> 60+<br>
+      </div>
+      <div class="legend-box">
+        <b>Densidad</b><br>
+        <div style="height:12px;background:linear-gradient(to right,blue,cyan,lime,yellow,orange,red)"></div>
+        <div style="display:flex;justify-content:space-between">
+          <small>Baja</small><small>Alta</small>
+        </div>
+      </div>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {{
+        var ctl = document.querySelector(".leaflet-control-layers");
+        if(ctl) document.getElementById("custom-legends").prepend(ctl);
+      }});
+    </script>
+    """
+    m.get_root().html.add_child(Html(legend, script=True))
 
-    # Guardar mapa
-    map_obj.save(output_file)
+    # --- 7) bind de los marcadores, esperando a que map_xxx exista ---
+    map_var = m.get_name()   # e.g. "map_abcd1234..."
+    bind_lines = "\n".join(
+        f"{nm}.on('click', function() {{ showImageLightbox('{u}'); }});"
+        for nm,u in bindings
+    )
+    bind_js = f"""
+    <script>
+    (function waitForMap() {{
+      if (typeof {map_var} === 'undefined') {{
+        setTimeout(waitForMap, 50);
+      }} else {{
+        {map_var}.whenReady(function() {{
+          {bind_lines}
+        }});
+      }}
+    }})();
+    </script>
+    """
+    m.get_root().html.add_child(Html(bind_js, script=True))
+
+    # --- 8) finalmente añadimos el control de capas y guardamos ---
+    LayerControl(collapsed=False).add_to(m)
+
+    m.save(output_file)
     print(f"Mapa HTML generado: {output_file}")
-    return output_file
-
-
-def create_kml(image_data_list, output_file="images_map.kml"):
-    """Genera un archivo KML con las imágenes geolocalizadas"""
-    kml = simplekml.Kml()
-    
-    for img_name, coords, img_obj in image_data_list:
-        if coords:
-            # Crear punto en KML
-            pnt = kml.newpoint(name=img_name, coords=[(coords[1], coords[0])])
-            
-            # Guardar imagen como archivo temporal
-            buffered = io.BytesIO()
-            img_obj.save(buffered, format="JPEG")
-            
-            # Añadir imagen como descripción
-            img_str = base64.b64encode(buffered.getvalue()).decode()
-            pnt.description = f'<img src="data:image/jpeg;base64,{img_str}" width="300px">'
-    
-    kml.save(output_file)
-    print(f"Archivo KML generado: {output_file}")
     return output_file
 
 def create_gpx(image_data_list, output_file="images_map.gpx"):
@@ -512,12 +543,12 @@ def get_images_from_drive(folder_id):
 
         # Filtrar y descargar solo archivos de imagen
 
-        #counter = 0
+        counter = 0
 
         for item in items:
-            #if counter >= 2:
-            #    break
-            #counter += 1
+            if counter >= 3:
+                break
+            counter += 1
             file_name = item['name']
             file_id = item['id']
 
