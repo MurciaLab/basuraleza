@@ -270,37 +270,75 @@ def create_folium_map(image_data_list, output_file="images_map.html", include_he
     )
     TileLayer("Cartodb Positron", name="Mapa base").add_to(m)
 
+    layout_css = """
+    <style>
+    /* 1) Sin scroll en toda la página */
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    /* 2) Los wrappers automáticos de Folium no ocupan 100% de altura */
+    div[id^="html_"] {
+        width: auto !important;
+        height: auto !important;
+        position: static !important;
+    }
+
+    /* 3) El mapa y el contenedor Leaflet ocupan siempre todo el viewport */
+    .folium-map, .leaflet-container {
+        position: absolute !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+    }
+    </style>
+    """
+    m.get_root().html.add_child(Html(layout_css, script=True))
+
     # --- 3) inyectar el modal/lightbox ---
     lightbox = """
     <style>
-      .img-modal { display:none; position:fixed; z-index:10000;
-                   left:0; top:0; width:100vw; height:100vh;
-                   background:rgba(0,0,0,0.8);
-                   align-items:center; justify-content:center; }
-      .img-modal__content {
-        max-width:90vw; max-height:90vh; box-shadow:0 0 20px rgba(0,0,0,0.5);
+    .img-modal { display:none; position:fixed; z-index:10000;
+                left:0; top:0; width:100vw; height:100vh;
+                background:rgba(0,0,0,0.8);
+                align-items:center; justify-content:center; }
+    .img-modal__content {
+        max-width:90vw; max-height:90vh;
+        box-shadow:0 0 20px rgba(0,0,0,0.5);
         border-radius:4px; object-fit:contain;
-      }
-      .img-modal__close {
+    }
+    .img-modal__close {
         position:absolute; top:1rem; right:1rem;
         font-size:2rem; color:#fff; cursor:pointer;
-      }
+    }
     </style>
     <div id="imgModal" class="img-modal">
-      <span id="imgModalClose" class="img-modal__close">&times;</span>
-      <img id="imgModalContent" class="img-modal__content" src="" alt="Foto"/>
+    <span id="imgModalClose" class="img-modal__close">&times;</span>
+    <img id="imgModalContent" class="img-modal__content" src="" alt="Foto"/>
     </div>
     <script>
-      const modal = document.getElementById("imgModal");
-      const modalImg = document.getElementById("imgModalContent");
-      const modalClose = document.getElementById("imgModalClose");
-      function showImageLightbox(url) {
+    const modal      = document.getElementById("imgModal");
+    const modalImg   = document.getElementById("imgModalContent");
+    const modalClose = document.getElementById("imgModalClose");
+
+    // ← NUEVA VERSIÓN: esperamos a que la imagen cargue antes de mostrar el modal
+    function showImageLightbox(url) {
+        const tmp = new Image();
+        tmp.onload = () => {
         modalImg.src = url;
         modal.style.display = "flex";
-      }
-      modalClose.onclick = () => modal.style.display = "none";
-      modal.onclick = e => { if(e.target===modal) modal.style.display="none"; };
-      document.addEventListener("keydown", e => { if(e.key==="Escape") modal.style.display="none"; });
+        };
+        tmp.src = url;
+    }
+
+    modalClose.onclick = () => modal.style.display = "none";
+    modal.onclick = e => { if(e.target===modal) modal.style.display="none"; };
+    document.addEventListener("keydown", e => { if(e.key==="Escape") modal.style.display="none"; });
     </script>
     """
     m.get_root().html.add_child(Html(lightbox, script=True))
