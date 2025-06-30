@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- Leaflet core -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+  <!-- MarkerCluster -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.1.0/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.1.0/MarkerCluster.Default.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.1.0/leaflet.markercluster.js"></script>
+  <!-- HeatMap plugin -->
+  <script src="https://cdn.jsdelivr.net/gh/Leaflet/Leaflet.heat/dist/leaflet-heat.js"></script>
+  <!-- AwesomeMarkers -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+  <!-- Bootstrap & jQuery for modal -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" />
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css" />
+  <style>
+    html, body, #map { margin:0; padding:0; height:100%; width:100%; }
+    /* Layer switcher container */
+    #layer-switcher {
+      position: fixed;
+      top: 10px; right: 10px;
+      z-index: 1000;
+      background: #fff;
+      padding: 6px;
+      border-radius: 4px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+      width: 240px;
+    }
+    /* Remove inner Leaflet control frame */
+    #layer-switcher .leaflet-control-layers,
+    #layer-switcher .leaflet-control-layers-list {
+      background: transparent !important;
+      box-shadow: none !important;
+      margin: 0;
+      padding: 0;
+    }
+    /* Legend container */
+    #legend-container {
+      position: fixed;
+      top: 80px; right: 10px;
+      z-index: 1000;
+      background: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 240px;
+      margin-top: 8px;
+    }
+    /* Mobile slide-in/out for legend */
+    #legend-toggle {
+      display: none;
+      position: fixed; top:10px; right:10px;
+      z-index:1001; width:32px; height:32px;
+      background:#fff; border-radius:4px;
+      box-shadow:0 1px 5px rgba(0,0,0,0.4);
+      align-items:center; justify-content:center;
+      cursor:pointer; font-size:20px;
+    }
+    @media(max-width:600px) {
+      #layer-switcher { transform: translateX(0); } /* always visible */
+      #legend-toggle { display:flex; }
+      #legend-container { transform: translateX(110%); transition: transform 0.3s ease-in-out; }
+      #legend-container.show { transform: translateX(0); }
+    }
+    .legend-box { margin-bottom: 6px; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Layer switcher placeholder -->
+  <div id="layer-switcher"></div>
+
+  <!-- Legend toggle for mobile -->
+  <div id="legend-toggle">☰</div>
+
+  <!-- Legend boxes container -->
+  <div id="legend-container">
+    <div class="legend-box" id="cluster-legend">
+      <b>Tamaño de grupo</b><br>
+      <span style="background:#FFA500;width:12px;height:12px;display:inline-block"></span> 1–9<br>
+      <span style="background:#FF7F50;width:12px;height:12px;display:inline-block"></span> 10–29<br>
+      <span style="background:#FF4500;width:12px;height:12px;display:inline-block"></span> 30–59<br>
+      <span style="background:#B22222;width:12px;height:12px;display:inline-block"></span> 60+<br>
+    </div>
+    <div class="legend-box" id="heatmap-legend">
+      <b>Densidad</b><br>
+      <div style="height:12px;background:linear-gradient(to right,blue,cyan,lime,yellow,orange,red)"></div>
+      <div style="display:flex;justify-content:space-between"><small>Baja</small><small>Alta</small></div>
+    </div>
+  </div>
+
+  <!-- Image modal -->
+  <div class="modal fade" id="imgModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen-sm-down modal-dialog-centered">
+      <div class="modal-content bg-transparent border-0">
+        <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3"
+                data-bs-dismiss="modal"></button>
+        <img src="" id="imgModalContent" class="img-fluid rounded" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const map = L.map('map', { center:[37.96647,-1.13528], zoom:12 });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{minZoom:0,maxZoom:19}).addTo(map);
+
+    fetch('data/photos.json')
+      .then(res=>res.json())
+      .then(data=>{
+        const photoCluster = L.markerClusterGroup();
+        const heatPoints = [];
+        data.forEach(p=>{
+          const m=L.marker([p.lat,p.lng],{
+            icon:L.AwesomeMarkers.icon({icon:'camera',prefix:'fa',markerColor:'blue'})
+          });
+          m.on('click',()=>{
+            document.getElementById('imgModalContent').src=p.img;
+            new bootstrap.Modal(document.getElementById('imgModal')).show();
+          });
+          photoCluster.addLayer(m);
+          heatPoints.push([p.lat,p.lng,0.2]);
+        });
+        const heatLayer=L.heatLayer(heatPoints,{radius:25});
+        const overlays={'Fotos Geolocalizadas':photoCluster,'Densidad':heatLayer};
+        const lc=L.control.layers(null,overlays,{collapsed:false}).addTo(map);
+
+        // move layer control into our #layer-switcher
+        const lcDiv=document.querySelector('.leaflet-control-layers');
+        const layerSwitcher=document.getElementById('layer-switcher');
+        layerSwitcher.innerHTML = '';
+        layerSwitcher.appendChild(lcDiv);
+
+        // show photos by default
+        photoCluster.addTo(map);
+
+        // legend & layer update logic
+        const clusterLegend=document.getElementById('cluster-legend');
+        const heatLegend=document.getElementById('heatmap-legend');
+        function updatePanels(){
+          const checks=document.querySelectorAll('.leaflet-control-layers-overlays input[type="checkbox"]');
+          let showPhotos=false, showHeat=false;
+          checks.forEach(cb=>{
+            const txt = cb.nextSibling.textContent;
+            if(cb.checked && txt.includes('Fotos')) showPhotos=true;
+            if(cb.checked && txt.includes('Densidad')) showHeat=true;
+          });
+          clusterLegend.style.display=showPhotos?'block':'none';
+          heatLegend.style.display=showHeat?'block':'none';
+        }
+        map.on('overlayadd overlayremove zoomend moveend',updatePanels);
+        updatePanels();
+      });
+
+    // mobile toggle for legend
+    document.getElementById('legend-toggle').onclick=()=>{
+      document.getElementById('legend-container').classList.toggle('show');
+    };
+  </script>
+</body>
+</html>
