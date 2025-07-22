@@ -1,0 +1,149 @@
+<!-- Sustituye todo lo anterior por este HTML actualizado -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Basuraleza</title>
+    <meta name="description" content="Sube tus fotos de residuos en la vía pública y ayuda a mapear el municipo de Murcia para exigir soluciones">
+
+    <!-- Open Graph for Facebook, WhatsApp, Telegram, etc. -->
+    <meta property="og:title" content="Basuraleza - Mapea la basura del municipio">
+    <meta property="og:description" content="Sube tus fotos de residuos en la vía pública y ayuda a mapear el municipo de Murcia para exigir soluciones">
+    <meta property="og:image" content="https://basuraleza.murcialab.org/images/preview.jpg">
+    <meta property="og:url" content="https://basuraleza.murcialab.org">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Basuraleza">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Basuraleza - Mapea la basura del municipio">
+    <meta name="twitter:description" content="Sube tus fotos de residuos en la vía pública y ayuda a mapear el municipo de Murcia para exigir soluciones">
+    <meta name="twitter:image" content="https://basuraleza.murcialab.org/images/preview.jpg">
+    <meta name="twitter:url" content="https://basuraleza.murcialab.org">
+
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <div class="banner">
+        <button id="infoBtn" class="small-btn">Información del proyecto</button>
+        <button id="helpBtn" class="small-btn">Ayuda</button>
+    </div>
+
+    <!-- Info Modal -->
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('infoModal')">&times;</span>
+            <h2>Basuraleza</h2>
+            <img src="images/foto-basuraleza.jpeg" alt="Basuraleza" class="foto-basuraleza">
+            <p>Es un esfuerzo por combatir la problemática de los residuos abandonados en nuestro entorno, poniendo el foco en la <b>participación activa de los vecinos</b> mediante una herramienta tan sencilla como efectiva: </p>
+            <p>Una página web que permite a cualquier ciudadano fotografiar puntos de acumulación de residuos y subirlos.</p>
+            <p>Todas las fotos aportadas serán marcadas en un mapa del municipio</p>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('helpModal')">&times;</span>
+            <section>
+                <!-- Contenido original intacto -->
+                <h2>¿Por qué incluir la ubicación en la foto?</h2>
+                <p>Al final del proyecto, se generará un mapa con todos los puntos calientes gracias a las coordenadas GPS incluidas en la foto. Por esto, es indispensable tomar la fotografía con la ubicación activada en nuestro dispositivo móvil.</p>
+                <h2>Privacidad</h2>
+                <p>Se usará la fecha y las coordenadas de la foto, junto a la foto en sí misma. No se guarda ninguna información relacionada al usuario, siendo totalmente anónima la participación en el proyecto.</p>
+                <h2>¿Cómo activo la ubicación en mi cámara?</h2>
+                <p>El procedimiento varía según el dispositivo. A continuación, se indica cómo hacerlo en los distintos modelos:</p>
+                <!-- Lista de dispositivos intacta -->
+                <ul>
+                    <li><strong>Google Pixel:</strong> Configuración de la cámara → Guardar ubicación.</li>
+                    <li><strong>iOS:</strong> Configuración → Privacidad → Servicios de ubicación → Cámara: Mientras la app está en uso.</li>
+                    <li><strong>LG:</strong> Configuración de la cámara → Etiquetar ubicaciones.</li>
+                    <li><strong>Motorola:</strong> Configuración de la cámara → Guardar ubicación.</li>
+                    <li><strong>Nokia:</strong> Configuración de la cámara → Etiqueta de ubicación.</li>
+                    <li><strong>OnePlus:</strong> Configuración de la cámara → Guardar datos de ubicación.</li>
+                    <li><strong>OPPO:</strong> Configuración de la cámara → Ubicación.</li>
+                    <li><strong>Samsung:</strong> Configuración de la cámara → Etiquetas de ubicación.</li>
+                    <li><strong>Sony:</strong> Configuración de la cámara → Guardar ubicación.</li>
+                    <li><strong>Vivo:</strong> Configuración de la cámara → Ubicaciones geográficas.</li>
+                    <li><strong>Xiaomi:</strong> Configuración de la cámara → Guardar información de la ubicación.</li>
+                    <li><strong>ZTE:</strong> Configuración de la cámara → Etiquetado geográfico o Guardar ubicación.</li>
+                </ul>
+                <h2>¿Cómo subo las imágenes al proyecto?</h2>
+                <ul>
+                    <li>Accede a la web <a href="https://murcialab.github.io/basuraleza/" target="_blank">Basuraleza</a>.</li>
+                    <li>Para añadir las imágenes que deseas, pulsa el botón <strong>"Seleccionar fotos"</strong>.</li>
+                    <li><em>Nota:</em> En este punto, las fotos aún <strong>NO</strong> se han subido.</li>
+                    <li>Si la foto no tiene datos GPS, aparecerá como errónea y el botón de "Subir" estará deshabilitado. Se mostrará un enlace con información sobre cómo activar la ubicación en la cámara.</li>
+                    <li>Si el lote contiene imágenes con y sin coordenadas, el botón de "Subir" se habilitará, permitiendo subir solo las válidas.</li>
+                    <li>Antes de subir definitivamente, puedes eliminar las imágenes no deseadas con el botón "Eliminar".</li>
+                    <li>Finalmente, pulsa <strong>"Subir"</strong> para completar el proceso.</li>
+                    <li>Al finalizar la subida, aparecerá un mensaje con el resultado de la operación.</li>
+                </ul>
+            </section>
+        </div>
+    </div>
+
+    <img src="images/logo-basuraleza.jpg" alt="Logo basuraleza" class="logo">
+    <h2>Basuraleza</h2>
+
+    <!-- BOTONES DESHABILITADOS -->
+    <p class="upload-disabled">La subida de fotos está deshabilitada. Puedes explorar los resultados abajo.</p>
+
+    <section class="informe-section">
+    <h3>Informe</h3>
+    <a href="https://murcialab.org">
+        <img src="images/thumbnail-informe.jpg" alt="Portada del informe Basuraleza Julio 2025" class="informe-imagen" />
+    </a>
+    <!-- <p><a href="https://murcialab.org" class="upload-btn">Ver informe completo</a></p> -->
+    </section>
+
+
+
+    <!-- SECCIÓN MAPA -->
+    <section class="mapa-section">
+        <h3>Mapa de basuraleza</h3>
+        <a href="/docs/mapa.html">
+            <img src="images/thumbnail-mapa.jpg" alt="Mapa de basuraleza" class="mapa-imagen" />
+        </a>
+        <!-- <p><a href="/mapa.html" class="upload-btn">Ver mapa interactivo completo</a></p> -->
+    </section>
+
+    <!-- SECCIÓN GALERÍA -->
+    <section class="galeria-section">
+        <h3>Fotos reportadas</h3>
+        <div class="galeria-grid">
+            <a href="/galeria.html"><img src="gallery/thumbs/1xUAUx-8CJtMR0MJkRBX3EE1YpHuKWPbM.jpg" alt="Foto reportada 1" /></a>
+            <a href="/galeria.html"><img src="gallery/thumbs/1W-YMM67bb-gVErVsNsiZSfOU7Yr-_dJO.jpg" alt="Foto reportada 2" /></a>
+            <a href="/galeria.html"><img src="gallery/thumbs/1OK_n8FcveYy0OPnXOUF4M4p7lw1SNAJ0.jpg" alt="Foto reportada 3" /></a>
+            <a href="/galeria.html"><img src="gallery/thumbs/1ci4szSqyCR5ynZe3NlQ5YCO8bqMspbCo.jpg" alt="Foto reportada 4" /></a>
+            <a href="/galeria.html"><img src="gallery/thumbs/1BTUP11hwowlLop4nhOL_oC5Wy364fqFT.jpg" alt="Foto reportada 5" /></a>
+            <a href="/galeria.html"><img src="gallery/thumbs/1ITNZhSInpxvKE9ocPHhCKRcD_GE91Csj.jpg" alt="Foto reportada 6" /></a>
+        </div>
+        <p><a href="/galeria/" class="upload-btn">Ver galería completa</a></p>
+    </section>
+
+    <!-- COMENTADO: botones de subida -->
+    <!--
+    <label for="fileInput" class="upload-btn">Seleccionar fotos</label>
+    <input type="file" id="fileInput" multiple accept="image/*, text/plain">
+    <button id="uploadBtn" class="upload-btn" disabled>Subir</button>
+    -->
+
+    <div id="thumbnails"></div>
+
+    <footer class="footer">
+        <span class="credit-text">Un proyecto de</span>
+        <a href="https://murcialab.org" target="_blank" class="credit-link">
+            <img src="images/MurciaLab-logo.png" alt="MurciaLab logo" class="murcialab-logo">
+        </a>
+    </footer>
+    <script type="module" src="script.v0.4.js"></script>
+</body>
+</html>
